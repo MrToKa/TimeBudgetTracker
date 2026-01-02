@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import Icon from 'react-native-vector-icons/MaterialIcons';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { ActivityWithCategory } from '../../types';
 import Colors from '../../constants/colors';
 import { formatDuration } from '../../utils/dateUtils';
@@ -46,7 +46,7 @@ export default function ActivityCard({
           </Text>
           
           {activity.isFavorite && (
-            <Icon name="star" size={16} color={Colors.warning} style={styles.favoriteIcon} />
+            <Icon name="heart" size={16} color={Colors.error} style={styles.favoriteIcon} />
           )}
         </View>
         
@@ -73,9 +73,9 @@ export default function ActivityCard({
             onPress={onToggleFavorite}
           >
             <Icon 
-              name={activity.isFavorite ? 'star' : 'star-outline'} 
+              name={activity.isFavorite ? 'heart' : 'heart-outline'} 
               size={24} 
-              color={activity.isFavorite ? Colors.warning : Colors.gray400} 
+              color={activity.isFavorite ? Colors.error : Colors.gray400} 
             />
           </TouchableOpacity>
         )}
@@ -85,7 +85,7 @@ export default function ActivityCard({
             style={[styles.startButton, { backgroundColor: activity.categoryColor }]}
             onPress={onStartTimer}
           >
-            <Icon name="play-arrow" size={24} color={Colors.white} />
+            <Icon name="play" size={24} color={Colors.white} />
           </TouchableOpacity>
         )}
         

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import Icon from 'react-native-vector-icons/MaterialIcons';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { RunningTimer } from '../../types';
 import Colors from '../../constants/colors';
 import { formatTimerDisplay, formatDuration } from '../../utils/dateUtils';
@@ -101,7 +101,7 @@ export default function TimerCard({ timer, onStop, onPress }: TimerCardProps) {
           style={styles.stopButton}
           onPress={onStop}
         >
-          <Icon name="stop" size={28} color={Colors.white} />
+          <Icon name="close-circle" size={28} color={Colors.white} />
         </TouchableOpacity>
       </TouchableOpacity>
     </Card>

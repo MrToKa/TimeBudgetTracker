@@ -4,7 +4,7 @@ import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import Icon from 'react-native-vector-icons/MaterialIcons';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
 import { RootStackParamList, MainTabParamList } from '../types';
 import Colors from '../constants/colors';
@@ -35,27 +35,22 @@ function MainTabs() {
     <Tab.Navigator
       screenOptions={({ route }) => ({
         tabBarIcon: ({ focused, color, size }) => {
-          let iconName: string;
-
-          switch (route.name) {
-            case 'Home':
-              iconName = 'home';
-              break;
-            case 'Timer':
-              iconName = 'timer';
-              break;
-            case 'Activities':
-              iconName = 'list';
-              break;
-            case 'Dashboard':
-              iconName = 'bar-chart';
-              break;
-            case 'More':
-              iconName = 'more-horiz';
-              break;
-            default:
-              iconName = 'circle';
-          }
+          const iconName = (() => {
+            switch (route.name) {
+              case 'Home':
+                return focused ? 'home-variant' : 'home-variant-outline';
+              case 'Timer':
+                return focused ? 'clock' : 'clock-outline';
+              case 'Activities':
+                return focused ? 'format-list-bulleted-square' : 'format-list-bulleted';
+              case 'Dashboard':
+                return focused ? 'view-dashboard' : 'view-dashboard-outline';
+              case 'More':
+                return 'dots-horizontal';
+              default:
+                return 'checkbox-blank-circle-outline';
+            }
+          })();
 
           return <Icon name={iconName} size={size} color={color} />;
         },
@@ -123,6 +118,10 @@ export default function AppNavigator() {
           headerTitleStyle: {
             fontWeight: '600',
           },
+          headerBackTitleVisible: false,
+          headerBackImage: () => (
+            <Icon name="arrow-left" size={24} color={Colors.white} style={{ marginLeft: 10 }} />
+          ),
         }}
       >
         <Stack.Screen 

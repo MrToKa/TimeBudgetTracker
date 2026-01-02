@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
 import { useTimerStore } from '../../store/timerStore';
 import Colors from '../../constants/colors';
@@ -31,13 +32,19 @@ export default function TimerScreen() {
         <Text style={styles.title}>Parallel Timers</Text>
         <Text style={styles.subtitle}>Unlimited overlapping timers allowed.</Text>
         <View style={styles.actions}>
-          <Button title="Refresh" variant="outline" onPress={loadRunningTimers} />
+          <Button
+            title="Refresh"
+            variant="outline"
+            onPress={loadRunningTimers}
+            icon={<Icon name="refresh" size={18} color={Colors.primary} style={styles.actionIcon} />}
+          />
           <Button
             title="Stop all"
             variant="danger"
             style={{ marginLeft: 8 }}
             onPress={handleStopAll}
             loading={stopAllLoading}
+            icon={<Icon name="stop" size={18} color={Colors.white} style={styles.actionIcon} />}
           />
         </View>
       </View>
@@ -90,5 +97,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     color: Colors.textSecondary,
+  },
+  actionIcon: {
+    marginRight: 8,
   },
 });

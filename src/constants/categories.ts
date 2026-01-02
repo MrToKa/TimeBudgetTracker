@@ -25,7 +25,7 @@ export const DEFAULT_CATEGORIES: DefaultCategory[] = [
     id: CATEGORY_IDS.DAILY_BASICS,
     name: 'Daily Basics',
     color: '#6B7280', // Gray
-    icon: 'home',
+    icon: 'home-variant',
     activities: [
       'Sleeping',
       'Eating',
@@ -40,7 +40,7 @@ export const DEFAULT_CATEGORIES: DefaultCategory[] = [
     id: CATEGORY_IDS.EDUCATION,
     name: 'Education',
     color: '#3B82F6', // Blue
-    icon: 'school',
+    icon: 'book-open-variant',
     activities: [
       'Language learning',
       'Computer skills',
@@ -52,7 +52,7 @@ export const DEFAULT_CATEGORIES: DefaultCategory[] = [
     id: CATEGORY_IDS.HEALTH,
     name: 'Health',
     color: '#10B981', // Green
-    icon: 'fitness-center',
+    icon: 'dumbbell',
     activities: [
       'Exercises',
       'Gym',
@@ -65,7 +65,7 @@ export const DEFAULT_CATEGORIES: DefaultCategory[] = [
     id: CATEGORY_IDS.ENTERTAINMENT,
     name: 'Entertainment',
     color: '#8B5CF6', // Purple
-    icon: 'movie',
+    icon: 'movie-open',
     activities: [
       'YouTube',
       'Film',
@@ -88,7 +88,7 @@ export const DEFAULT_CATEGORIES: DefaultCategory[] = [
     id: CATEGORY_IDS.TIME_WASTING,
     name: 'Time Wasting',
     color: '#EF4444', // Red
-    icon: 'warning',
+    icon: 'alert-circle',
     activities: [
       'Games',
       'Porn',

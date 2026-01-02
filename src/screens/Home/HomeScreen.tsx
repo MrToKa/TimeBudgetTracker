@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, ScrollView, StyleSheet, ActivityIndicator, TouchableOpacity } from 'react-native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { useNavigation } from '@react-navigation/native';
-import Icon from 'react-native-vector-icons/MaterialIcons';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
 import { useActivityStore } from '../../store/activityStore';
 import { useTimerStore } from '../../store/timerStore';
@@ -42,12 +42,17 @@ export default function HomeScreen() {
         <Text style={styles.title}>Time Budget Tracker</Text>
         <Text style={styles.subtitle}>Offline-first · Parallel timers · Planned vs Unplanned</Text>
         <View style={styles.actionsRow}>
-          <Button title="Manual add" onPress={() => navigation.navigate('ManualAdd', {})} />
+          <Button
+            title="Start Timer"
+            onPress={() => navigation.navigate('ManualAdd', {})}
+            icon={<Icon name="plus" size={18} color={Colors.white} style={styles.buttonIcon} />}
+          />
           <Button
             title="Stop all"
             variant="outline"
             onPress={loadRunningTimers}
             style={{ marginLeft: 8 }}
+            icon={<Icon name="stop" size={18} color={Colors.primary} style={styles.buttonIcon} />}
           />
         </View>
       </View>
@@ -153,5 +158,8 @@ const styles = StyleSheet.create({
   },
   startIcon: {
     marginLeft: 6,
+  },
+  buttonIcon: {
+    marginRight: 8,
   },
 });
