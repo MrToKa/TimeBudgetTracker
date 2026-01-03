@@ -11,7 +11,7 @@ import Colors from '../constants/colors';
 
 // Screens
 import HomeScreen from '../screens/Home/HomeScreen';
-import TimerScreen from '../screens/Timer/TimerScreen';
+import ReviewScreen from '../screens/Review/ReviewScreen';
 import ActivitiesScreen from '../screens/Activities/ActivitiesScreen';
 import DashboardScreen from '../screens/Dashboard/DashboardScreen';
 import MoreScreen from '../screens/More/MoreScreen';
@@ -23,7 +23,7 @@ import CreateGoalScreen from '../screens/Goals/CreateGoalScreen';
 import EditGoalScreen from '../screens/Goals/EditGoalScreen';
 import SettingsScreen from '../screens/Settings/SettingsScreen';
 import BackupScreen from '../screens/Backup/BackupScreen';
-import ReviewScreen from '../screens/Review/ReviewScreen';
+import ReviewScreenStack from '../screens/Review/ReviewScreen';
 import RoutinesScreen from '../screens/Routines/RoutinesScreen';
 
 const Stack = createStackNavigator<RootStackParamList>();
@@ -39,8 +39,8 @@ function MainTabs() {
             switch (route.name) {
               case 'Home':
                 return focused ? 'home-variant' : 'home-variant-outline';
-              case 'Timer':
-                return focused ? 'clock' : 'clock-outline';
+              case 'Review':
+                return focused ? 'calendar-check' : 'calendar-check-outline';
               case 'Activities':
                 return focused ? 'format-list-bulleted-square' : 'format-list-bulleted';
               case 'Dashboard':
@@ -82,9 +82,9 @@ function MainTabs() {
         options={{ title: 'Home' }}
       />
       <Tab.Screen 
-        name="Timer" 
-        component={TimerScreen}
-        options={{ title: 'Timer' }}
+        name="Review" 
+        component={ReviewScreen}
+        options={{ title: 'Review' }}
       />
       <Tab.Screen 
         name="Activities" 
@@ -173,7 +173,7 @@ export default function AppNavigator() {
         />
         <Stack.Screen 
           name="Review" 
-          component={ReviewScreen}
+          component={ReviewScreenStack}
           options={{ title: 'Review Day' }}
         />
         <Stack.Screen 

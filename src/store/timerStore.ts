@@ -72,6 +72,18 @@ export const useTimerStore = create<TimerState>((set, get) => ({
   startTimer: async (activity, isPlanned = true, expectedMinutes = null) => {
     set({ error: null });
     try {
+      // Check if a timer with the same activity name is already running
+      const { runningTimers } = get();
+      const existingTimer = runningTimers.find(
+        t => t.activityName.toLowerCase() === activity.name.toLowerCase()
+      );
+      
+      if (existingTimer) {
+        const error = new Error(`Timer for "${activity.name}" is already running`);
+        set({ error: error.message });
+        throw error;
+      }
+      
       // Get category info
       const activityWithCategory = await activityRepository.getActivityByIdWithCategory(activity.id);
       if (!activityWithCategory) {
@@ -131,6 +143,10 @@ export const useTimerStore = create<TimerState>((set, get) => ({
       stopInactivityMonitor();
       await cancelInactivityNotification();
       
+      // Show timer start notification
+      const { showTimerStartNotification } = await import('../services/notificationService');
+      await showTimerStartNotification(activity.name);
+      
       return timer;
     } catch (error) {
       set({ error: (error as Error).message });
@@ -141,6 +157,18 @@ export const useTimerStore = create<TimerState>((set, get) => ({
   startQuickTimer: async (activityName, categoryId, categoryName, categoryColor, isPlanned = true) => {
     set({ error: null });
     try {
+      // Check if a timer with the same activity name is already running
+      const { runningTimers } = get();
+      const existingTimer = runningTimers.find(
+        t => t.activityName.toLowerCase() === activityName.toLowerCase()
+      );
+      
+      if (existingTimer) {
+        const error = new Error(`Timer for "${activityName}" is already running`);
+        set({ error: error.message });
+        throw error;
+      }
+      
       const startTime = nowISO();
       
       // Create session in database without activity reference
@@ -175,6 +203,10 @@ export const useTimerStore = create<TimerState>((set, get) => ({
         runningTimers: [...state.runningTimers, timer],
       }));
       
+      // Show timer start notification
+      const { showTimerStartNotification } = await import('../services/notificationService');
+      await showTimerStartNotification(activityName);
+      
       return timer;
     } catch (error) {
       set({ error: (error as Error).message });
@@ -185,6 +217,18 @@ export const useTimerStore = create<TimerState>((set, get) => ({
   startManualTimer: async (activityName, categoryId, categoryName, categoryColor, expectedMinutes, isPlanned = true) => {
     set({ error: null });
     try {
+      // Check if a timer with the same activity name is already running
+      const { runningTimers } = get();
+      const existingTimer = runningTimers.find(
+        t => t.activityName.toLowerCase() === activityName.toLowerCase()
+      );
+      
+      if (existingTimer) {
+        const error = new Error(`Timer for "${activityName}" is already running`);
+        set({ error: error.message });
+        throw error;
+      }
+      
       const startTime = nowISO();
       
       // Create session in database as a running timer
@@ -233,6 +277,10 @@ export const useTimerStore = create<TimerState>((set, get) => ({
       // Stop inactivity monitor since a timer is now running
       stopInactivityMonitor();
       await cancelInactivityNotification();
+      
+      // Show timer start notification
+      const { showTimerStartNotification } = await import('../services/notificationService');
+      await showTimerStartNotification(activityName);
       
       return timer;
     } catch (error) {

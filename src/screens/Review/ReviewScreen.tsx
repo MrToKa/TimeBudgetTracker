@@ -8,13 +8,37 @@ import {
   FlatList,
   Alert,
   RefreshControl,
+  Dimensions,
 } from 'react-native';
+import { PieChart } from 'react-native-chart-kit';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import Colors from '../../constants/colors';
 import { Card } from '../../components/common';
 import { SessionWithDetails, RootStackParamList } from '../../types';
-import { getSessionsForDay, deleteSession, updateSession } from '../../database/repositories/sessionRepository';
+import { getSessionsForDay, deleteSession, updateSession, getTotalMinutesByCategory } from '../../database/repositories/sessionRepository';
+import { getDayStart, getDayEnd } from '../../utils/dateUtils';
+
+const screenWidth = Dimensions.get('window').width;
+
+// Category colors for chart
+const CATEGORY_COLORS: Record<string, string> = {
+  'Daily Basics': '#6B7280',
+  'Education & Growth': '#3B82F6',
+  'Health & Fitness': '#10B981',
+  'Entertainment': '#8B5CF6',
+  'Hobbies & Creation': '#F59E0B',
+  'Time Wasting': '#EF4444',
+};
+
+const DEFAULT_COLORS = ['#3B82F6', '#10B981', '#8B5CF6', '#F59E0B', '#EF4444', '#06B6D4', '#EC4899'];
+
+interface CategoryStats {
+  categoryId: string;
+  categoryName: string;
+  totalMinutes: number;
+  color: string;
+}
 import { formatDuration, formatTime } from '../../utils/dateUtils';
 import { addDays, subDays, format, isToday, isYesterday } from 'date-fns';
 
@@ -33,11 +57,24 @@ export default function ReviewScreen() {
   const [sessions, setSessions] = useState<SessionWithDetails[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [categoryStats, setCategoryStats] = useState<CategoryStats[]>([]);
 
   const loadSessions = useCallback(async () => {
     try {
       const data = await getSessionsForDay(currentDate);
       setSessions(data);
+      
+      // Load category breakdown for pie chart
+      const start = getDayStart(currentDate);
+      const end = getDayEnd(currentDate);
+      const categoryData = await getTotalMinutesByCategory(start.toISOString(), end.toISOString());
+      const categoriesWithColors = categoryData.map((cat, index) => ({
+        categoryId: cat.categoryId,
+        categoryName: cat.categoryName,
+        totalMinutes: cat.totalMinutes,
+        color: CATEGORY_COLORS[cat.categoryName] || DEFAULT_COLORS[index % DEFAULT_COLORS.length],
+      }));
+      setCategoryStats(categoriesWithColors);
     } catch (error) {
       console.error('Error loading sessions:', error);
     } finally {
@@ -233,6 +270,31 @@ export default function ReviewScreen() {
       {/* Day Stats */}
       {!loading && sessions.length > 0 && renderDayStats()}
 
+      {/* Category Pie Chart */}
+      {!loading && categoryStats.length > 0 && (
+        <Card style={styles.chartCard}>
+          <Text style={styles.chartTitle}>Category Breakdown</Text>
+          <PieChart
+            data={categoryStats.map((cat) => ({
+              name: cat.categoryName,
+              population: cat.totalMinutes,
+              color: cat.color,
+              legendFontColor: Colors.textPrimary,
+              legendFontSize: 12,
+            }))}
+            width={screenWidth - 64}
+            height={180}
+            chartConfig={{
+              color: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
+            }}
+            accessor="population"
+            backgroundColor="transparent"
+            paddingLeft="0"
+            absolute
+          />
+        </Card>
+      )}
+
       {/* Sessions List */}
       <FlatList
         data={sessions}
@@ -415,5 +477,16 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 8,
     lineHeight: 20,
+  },
+  chartCard: {
+    marginHorizontal: 16,
+    marginTop: 16,
+    marginBottom: 0,
+  },
+  chartTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: Colors.textPrimary,
+    marginBottom: 16,
   },
 });

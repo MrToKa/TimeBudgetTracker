@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, ActivityIndicator, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, ActivityIndicator, RefreshControl, Alert } from 'react-native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { useNavigation } from '@react-navigation/native';
 
@@ -30,8 +30,12 @@ export default function ActivitiesScreen() {
   const handleStart = async (id: string) => {
     const activity = activities.find(a => a.id === id);
     if (!activity) return;
-    await startTimer(activity, activity.isPlannedDefault, activity.defaultExpectedMinutes);
-    await loadRunningTimers();
+    try {
+      await startTimer(activity, activity.isPlannedDefault, activity.defaultExpectedMinutes);
+      await loadRunningTimers();
+    } catch (error) {
+      Alert.alert('Cannot Start Timer', (error as Error).message);
+    }
   };
 
   const filtered = selectedCategory

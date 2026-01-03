@@ -120,6 +120,20 @@ export async function cancelTimerNotifications(sessionId: string): Promise<void>
   }
 }
 
+export async function showTimerStartNotification(activityName: string): Promise<void> {
+  await notifee.displayNotification({
+    title: '▶️ Timer Started',
+    body: `Tracking "${activityName}"`,
+    android: {
+      channelId: TIMER_CHANNEL_ID,
+      importance: AndroidImportance.DEFAULT,
+      pressAction: { id: 'default' },
+      smallIcon: 'ic_launcher',
+      color: '#3B82F6',
+    },
+  });
+}
+
 // ============================================
 // Inactivity Notifications
 // ============================================

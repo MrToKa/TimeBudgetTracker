@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, ActivityIndicator, TouchableOpacity } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, ActivityIndicator, TouchableOpacity, Alert } from 'react-native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { useNavigation } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -32,7 +32,8 @@ export default function HomeScreen() {
     try {
       await startTimer(activity, activity.isPlannedDefault, activity.defaultExpectedMinutes);
       await loadRunningTimers();
-    } finally {
+    } catch (error) {
+      Alert.alert('Cannot Start Timer', (error as Error).message);
     }
   };
 
