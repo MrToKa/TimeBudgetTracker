@@ -24,10 +24,10 @@ const screenWidth = Dimensions.get('window').width;
 // Category colors for chart
 const CATEGORY_COLORS: Record<string, string> = {
   'Daily Basics': '#6B7280',
-  'Education & Growth': '#3B82F6',
-  'Health & Fitness': '#10B981',
+  'Education': '#3B82F6',
+  'Health': '#10B981',
   'Entertainment': '#8B5CF6',
-  'Hobbies & Creation': '#F59E0B',
+  'Hobbies': '#F59E0B',
   'Time Wasting': '#EF4444',
 };
 
