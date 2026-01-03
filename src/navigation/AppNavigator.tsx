@@ -25,6 +25,9 @@ import SettingsScreen from '../screens/Settings/SettingsScreen';
 import BackupScreen from '../screens/Backup/BackupScreen';
 import ReviewScreenStack from '../screens/Review/ReviewScreen';
 import RoutinesScreen from '../screens/Routines/RoutinesScreen';
+import CreateRoutineScreen from '../screens/Routines/CreateRoutineScreen';
+import RoutineDetailScreen from '../screens/Routines/RoutineDetailScreen';
+import AddRoutineActivityScreen from '../screens/Routines/AddRoutineActivityScreen';
 
 const Stack = createStackNavigator<RootStackParamList>();
 const Tab = createBottomTabNavigator<MainTabParamList>();
@@ -180,6 +183,21 @@ export default function AppNavigator() {
           name="Routines" 
           component={RoutinesScreen}
           options={{ title: 'Routines' }}
+        />
+        <Stack.Screen 
+          name="CreateRoutine" 
+          component={CreateRoutineScreen}
+          options={{ title: 'Create Routine' }}
+        />
+        <Stack.Screen 
+          name="RoutineDetail" 
+          component={RoutineDetailScreen}
+          options={{ title: 'Edit Routine' }}
+        />
+        <Stack.Screen 
+          name="AddRoutineActivity" 
+          component={AddRoutineActivityScreen}
+          options={{ title: 'Add Activity' }}
         />
       </Stack.Navigator>
     </NavigationContainer>

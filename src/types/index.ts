@@ -350,6 +350,7 @@ export type RootStackParamList = {
   Routines: undefined;
   RoutineDetail: { routineId: string };
   CreateRoutine: undefined;
+  AddRoutineActivity: { routineId: string };
   Review: { date?: string };
   Backup: undefined;
   Settings: undefined;
