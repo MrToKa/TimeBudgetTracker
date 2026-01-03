@@ -87,11 +87,6 @@ function MainTabs() {
         options={{ title: 'Home' }}
       />
       <Tab.Screen 
-        name="Review" 
-        component={ReviewScreen}
-        options={{ title: 'Review' }}
-      />
-      <Tab.Screen 
         name="Activities" 
         component={ActivitiesScreen}
         options={{ title: 'Activities' }}
@@ -100,6 +95,11 @@ function MainTabs() {
         name="Dashboard" 
         component={DashboardScreen}
         options={{ title: 'Dashboard' }}
+      />
+      <Tab.Screen 
+        name="Review" 
+        component={ReviewScreen}
+        options={{ title: 'Review' }}
       />
       <Tab.Screen 
         name="More" 

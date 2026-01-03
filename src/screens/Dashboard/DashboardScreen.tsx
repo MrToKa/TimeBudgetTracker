@@ -73,7 +73,6 @@ export default function DashboardScreen() {
   const [plannedMinutes, setPlannedMinutes] = useState(0);
   const [unplannedMinutes, setUnplannedMinutes] = useState(0);
   const [sessionsCount, setSessionsCount] = useState(0);
-  const [overlappingSessions, setOverlappingSessions] = useState<number>(0);
   const [goalProgress, setGoalProgress] = useState<GoalProgress[]>([]);
 
   const styles = useMemo(() => createStyles(theme), [theme]);
@@ -89,27 +88,6 @@ export default function DashboardScreen() {
         return { start: getMonthStart(now), end: getMonthEnd(now) };
     }
   }, [timeRange]);
-
-  const detectOverlaps = (sessions: SessionWithDetails[]): number => {
-    let overlaps = 0;
-    for (let i = 0; i < sessions.length; i++) {
-      for (let j = i + 1; j < sessions.length; j++) {
-        const s1 = sessions[i];
-        const s2 = sessions[j];
-        if (!s1.endTime || !s2.endTime) continue;
-        
-        const s1Start = new Date(s1.startTime).getTime();
-        const s1End = new Date(s1.endTime).getTime();
-        const s2Start = new Date(s2.startTime).getTime();
-        const s2End = new Date(s2.endTime).getTime();
-        
-        if (s1Start < s2End && s2Start < s1End) {
-          overlaps++;
-        }
-      }
-    }
-    return overlaps;
-  };
 
   const loadData = useCallback(async () => {
     try {
@@ -130,7 +108,6 @@ export default function DashboardScreen() {
       }
       
       setSessionsCount(sessions.length);
-      setOverlappingSessions(detectOverlaps(sessions));
       
       // Get category breakdown
       const categoryData = await getTotalMinutesByCategory(start.toISOString(), end.toISOString());
@@ -237,18 +214,6 @@ export default function DashboardScreen() {
       </View>
     </Card>
   );
-
-  const renderOverlapBanner = () => {
-    if (overlappingSessions === 0) return null;
-    return (
-      <View style={styles.overlapBanner}>
-        <Icon name="alert-circle" size={20} color={theme.warning} />
-        <Text style={styles.overlapText}>
-          {overlappingSessions} overlapping session{overlappingSessions > 1 ? 's' : ''} detected
-        </Text>
-      </View>
-    );
-  };
 
   const renderCategoryChart = () => {
     if (categoryStats.length === 0) {
@@ -395,7 +360,6 @@ export default function DashboardScreen() {
     >
       <Text style={styles.screenTitle}>Dashboard</Text>
       {renderTimeRangeSelector()}
-      {renderOverlapBanner()}
       {renderSummaryCard()}
       {renderCategoryChart()}
       {renderPlannedVsUnplanned()}
@@ -460,20 +424,6 @@ const createStyles = (theme: ReturnType<typeof useTheme>['theme']) => StyleSheet
   timeRangeButtonTextActive: {
     color: theme.primary,
     fontWeight: '600',
-  },
-  overlapBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: theme.warningLight + '20',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 16,
-  },
-  overlapText: {
-    marginLeft: 8,
-    fontSize: 14,
-    color: theme.warning,
-    fontWeight: '500',
   },
   summaryCard: {
     marginBottom: 16,
