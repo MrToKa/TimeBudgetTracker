@@ -315,3 +315,9 @@ To learn more about React Native, take a look at the following resources:
 - [Learn the Basics](https://reactnative.dev/docs/getting-started) - a **guided tour** of the React Native **basics**.
 - [Blog](https://reactnative.dev/blog) - read the latest official React Native **Blog** posts.
 - [`@facebook/react-native`](https://github.com/facebook/react-native) - the Open Source; GitHub **repository** for React Native.
+
+## Known issues
+
+IMPORTANT: This app was tested only on Samsung Galaxy S24 Ultra. It might not work properly on other devices. Feel free to adapt the app to your device specifications.
+
+In landscape mode the software buttons are overlapping the side of the app and the part below the buttons is not visible.
