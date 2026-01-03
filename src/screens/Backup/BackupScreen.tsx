@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -12,7 +12,7 @@ import {
   Platform,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-import Colors from '../../constants/colors';
+import { useTheme } from '../../contexts/ThemeContext';
 import { Card, Button } from '../../components/common';
 import { BackupData, BackupMetadata } from '../../types';
 import { getAllCategories } from '../../database/repositories/categoryRepository';
@@ -25,6 +25,8 @@ const APP_VERSION = '1.0.0';
 const BACKUP_VERSION = 1;
 
 export default function BackupScreen() {
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const [exporting, setExporting] = useState(false);
   const [importing, setImporting] = useState(false);
   const [lastBackup, setLastBackup] = useState<string | null>(null);
@@ -118,22 +120,22 @@ export default function BackupScreen() {
       <Text style={styles.sectionTitle}>Data Overview</Text>
       <View style={styles.statsRow}>
         <View style={styles.statItem}>
-          <Icon name="folder" size={24} color={Colors.primary} />
+          <Icon name="folder" size={24} color={theme.primary} />
           <Text style={styles.statLabel}>Categories</Text>
           <Text style={styles.statValue}>-</Text>
         </View>
         <View style={styles.statItem}>
-          <Icon name="format-list-bulleted" size={24} color={Colors.success} />
+          <Icon name="format-list-bulleted" size={24} color={theme.success} />
           <Text style={styles.statLabel}>Activities</Text>
           <Text style={styles.statValue}>-</Text>
         </View>
         <View style={styles.statItem}>
-          <Icon name="clock" size={24} color={Colors.secondary} />
+          <Icon name="clock" size={24} color={theme.secondary} />
           <Text style={styles.statLabel}>Sessions</Text>
           <Text style={styles.statValue}>-</Text>
         </View>
         <View style={styles.statItem}>
-          <Icon name="flag" size={24} color={Colors.warning} />
+          <Icon name="flag" size={24} color={theme.warning} />
           <Text style={styles.statLabel}>Goals</Text>
           <Text style={styles.statValue}>-</Text>
         </View>
@@ -152,8 +154,8 @@ export default function BackupScreen() {
 
       <Card style={styles.actionCard}>
         <View style={styles.actionHeader}>
-          <View style={[styles.actionIcon, { backgroundColor: Colors.success + '15' }]}>
-            <Icon name="cloud-upload" size={28} color={Colors.success} />
+          <View style={[styles.actionIcon, { backgroundColor: theme.success + '15' }]}>
+            <Icon name="cloud-upload" size={28} color={theme.success} />
           </View>
           <View style={styles.actionText}>
             <Text style={styles.actionTitle}>Export Backup</Text>
@@ -177,8 +179,8 @@ export default function BackupScreen() {
 
       <Card style={styles.actionCard}>
         <View style={styles.actionHeader}>
-          <View style={[styles.actionIcon, { backgroundColor: Colors.primary + '15' }]}>
-            <Icon name="cloud-download" size={28} color={Colors.primary} />
+          <View style={[styles.actionIcon, { backgroundColor: theme.primary + '15' }]}>
+            <Icon name="cloud-download" size={28} color={theme.primary} />
           </View>
           <View style={styles.actionText}>
             <Text style={styles.actionTitle}>Import Backup</Text>
@@ -197,7 +199,7 @@ export default function BackupScreen() {
       </Card>
 
       <Card style={styles.infoCard}>
-        <Icon name="information" size={20} color={Colors.info} />
+        <Icon name="information" size={20} color={theme.info} />
         <Text style={styles.infoText}>
           Backups include categories, activities, time sessions, goals, and settings.
           Data is exported as a JSON file that you can save to cloud storage or share.
@@ -212,10 +214,10 @@ export default function BackupScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ReturnType<typeof useTheme>['theme']) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: theme.background,
   },
   content: {
     padding: 16,
@@ -224,11 +226,11 @@ const styles = StyleSheet.create({
   screenTitle: {
     fontSize: 28,
     fontWeight: '700',
-    color: Colors.textPrimary,
+    color: theme.textPrimary,
   },
   subtitle: {
     fontSize: 15,
-    color: Colors.textSecondary,
+    color: theme.textSecondary,
     marginTop: 8,
     marginBottom: 20,
     lineHeight: 22,
@@ -236,7 +238,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: Colors.textPrimary,
+    color: theme.textPrimary,
     marginBottom: 16,
   },
   statsCard: {
@@ -251,13 +253,13 @@ const styles = StyleSheet.create({
   },
   statLabel: {
     fontSize: 12,
-    color: Colors.textSecondary,
+    color: theme.textSecondary,
     marginTop: 6,
   },
   statValue: {
     fontSize: 18,
     fontWeight: '600',
-    color: Colors.textPrimary,
+    color: theme.textPrimary,
     marginTop: 2,
   },
   actionCard: {
@@ -282,11 +284,11 @@ const styles = StyleSheet.create({
   actionTitle: {
     fontSize: 17,
     fontWeight: '600',
-    color: Colors.textPrimary,
+    color: theme.textPrimary,
   },
   actionSubtitle: {
     fontSize: 13,
-    color: Colors.textSecondary,
+    color: theme.textSecondary,
     marginTop: 2,
   },
   actionButton: {
@@ -294,23 +296,23 @@ const styles = StyleSheet.create({
   },
   lastBackup: {
     fontSize: 12,
-    color: Colors.textSecondary,
+    color: theme.textSecondary,
     textAlign: 'center',
     marginTop: 12,
   },
   infoCard: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    backgroundColor: Colors.info + '10',
+    backgroundColor: theme.info + '10',
     borderWidth: 1,
-    borderColor: Colors.info + '30',
+    borderColor: theme.info + '30',
     marginBottom: 16,
   },
   infoText: {
     flex: 1,
     marginLeft: 12,
     fontSize: 13,
-    color: Colors.textSecondary,
+    color: theme.textSecondary,
     lineHeight: 20,
   },
   footer: {
@@ -319,7 +321,7 @@ const styles = StyleSheet.create({
   },
   footerText: {
     fontSize: 12,
-    color: Colors.textTertiary,
+    color: theme.textTertiary,
     marginTop: 4,
   },
 });

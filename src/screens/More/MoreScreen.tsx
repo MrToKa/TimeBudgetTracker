@@ -1,9 +1,9 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import Colors from '../../constants/colors';
+import { useTheme } from '../../contexts/ThemeContext';
 import { Card } from '../../components/common';
 import { RootStackParamList } from '../../types';
 
@@ -15,7 +15,7 @@ interface MenuItem {
   subtitle: string;
   icon: string;
   screen?: keyof RootStackParamList;
-  color: string;
+  colorKey: 'success' | 'secondary' | 'info' | 'primary' | 'gray500';
   enabled: boolean;
 }
 
@@ -26,7 +26,7 @@ const MENU_ITEMS: MenuItem[] = [
     subtitle: 'Set min/max time targets for activities',
     icon: 'flag-checkered',
     screen: 'Goals',
-    color: Colors.success,
+    colorKey: 'success',
     enabled: true,
   },
   {
@@ -35,7 +35,7 @@ const MENU_ITEMS: MenuItem[] = [
     subtitle: 'Create daily/weekly schedules',
     icon: 'calendar-clock',
     screen: 'Routines',
-    color: Colors.secondary,
+    colorKey: 'secondary',
     enabled: true,
   },
   {
@@ -44,7 +44,7 @@ const MENU_ITEMS: MenuItem[] = [
     subtitle: 'Edit and annotate past sessions',
     icon: 'history',
     screen: 'Review',
-    color: Colors.info,
+    colorKey: 'info',
     enabled: true,
   },
   {
@@ -53,7 +53,7 @@ const MENU_ITEMS: MenuItem[] = [
     subtitle: 'Export or import your data',
     icon: 'cloud-sync',
     screen: 'Backup',
-    color: Colors.primary,
+    colorKey: 'primary',
     enabled: true,
   },
   {
@@ -62,13 +62,15 @@ const MENU_ITEMS: MenuItem[] = [
     subtitle: 'App preferences and notifications',
     icon: 'cog',
     screen: 'Settings',
-    color: Colors.gray500,
+    colorKey: 'gray500',
     enabled: true,
   },
 ];
 
 export default function MoreScreen() {
   const navigation = useNavigation<NavigationProp>();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
 
   const handlePress = (item: MenuItem) => {
     if (item.enabled && item.screen) {
@@ -80,33 +82,36 @@ export default function MoreScreen() {
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <Text style={styles.title}>More</Text>
       
-      {MENU_ITEMS.map((item) => (
-        <TouchableOpacity
-          key={item.id}
-          onPress={() => handlePress(item)}
-          disabled={!item.enabled}
-          activeOpacity={item.enabled ? 0.7 : 1}
-        >
-          <Card style={[styles.menuItem, !item.enabled && styles.menuItemDisabled]}>
-            <View style={[styles.iconContainer, { backgroundColor: item.color + '15' }]}>
-              <Icon name={item.icon} size={24} color={item.enabled ? item.color : Colors.gray400} />
-            </View>
-            <View style={styles.menuText}>
-              <Text style={[styles.menuTitle, !item.enabled && styles.menuTitleDisabled]}>
-                {item.title}
-              </Text>
-              <Text style={styles.menuSubtitle}>{item.subtitle}</Text>
-            </View>
-            {item.enabled ? (
-              <Icon name="chevron-right" size={24} color={Colors.textSecondary} />
-            ) : (
-              <View style={styles.comingSoonBadge}>
-                <Text style={styles.comingSoonText}>Soon</Text>
+      {MENU_ITEMS.map((item) => {
+        const itemColor = theme[item.colorKey];
+        return (
+          <TouchableOpacity
+            key={item.id}
+            onPress={() => handlePress(item)}
+            disabled={!item.enabled}
+            activeOpacity={item.enabled ? 0.7 : 1}
+          >
+            <Card style={[styles.menuItem, !item.enabled && styles.menuItemDisabled]}>
+              <View style={[styles.iconContainer, { backgroundColor: itemColor + '15' }]}>
+                <Icon name={item.icon} size={24} color={item.enabled ? itemColor : theme.gray400} />
               </View>
-            )}
-          </Card>
-        </TouchableOpacity>
-      ))}
+              <View style={styles.menuText}>
+                <Text style={[styles.menuTitle, !item.enabled && styles.menuTitleDisabled]}>
+                  {item.title}
+                </Text>
+                <Text style={styles.menuSubtitle}>{item.subtitle}</Text>
+              </View>
+              {item.enabled ? (
+                <Icon name="chevron-right" size={24} color={theme.textSecondary} />
+              ) : (
+                <View style={styles.comingSoonBadge}>
+                  <Text style={styles.comingSoonText}>Soon</Text>
+                </View>
+              )}
+            </Card>
+          </TouchableOpacity>
+        );
+      })}
 
       <View style={styles.footer}>
         <Text style={styles.footerText}>Time Budget Tracker v1.0.0</Text>
@@ -116,10 +121,10 @@ export default function MoreScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ReturnType<typeof useTheme>['theme']) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: theme.background,
   },
   content: {
     padding: 16,
@@ -128,7 +133,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: '700',
-    color: Colors.textPrimary,
+    color: theme.textPrimary,
     marginBottom: 20,
   },
   menuItem: {
@@ -154,18 +159,18 @@ const styles = StyleSheet.create({
   menuTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: Colors.textPrimary,
+    color: theme.textPrimary,
   },
   menuTitleDisabled: {
-    color: Colors.textSecondary,
+    color: theme.textSecondary,
   },
   menuSubtitle: {
     fontSize: 13,
-    color: Colors.textSecondary,
+    color: theme.textSecondary,
     marginTop: 2,
   },
   comingSoonBadge: {
-    backgroundColor: Colors.gray200,
+    backgroundColor: theme.gray200,
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 12,
@@ -173,23 +178,23 @@ const styles = StyleSheet.create({
   comingSoonText: {
     fontSize: 11,
     fontWeight: '600',
-    color: Colors.textSecondary,
+    color: theme.textSecondary,
   },
   footer: {
     marginTop: 24,
     alignItems: 'center',
     paddingTop: 16,
     borderTopWidth: 1,
-    borderTopColor: Colors.border,
+    borderTopColor: theme.border,
   },
   footerText: {
     fontSize: 14,
     fontWeight: '500',
-    color: Colors.textSecondary,
+    color: theme.textSecondary,
   },
   footerSubtext: {
     fontSize: 12,
-    color: Colors.textTertiary,
+    color: theme.textTertiary,
     marginTop: 4,
   },
 });

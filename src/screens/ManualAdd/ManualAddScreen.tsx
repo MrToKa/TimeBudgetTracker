@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { View, Text, StyleSheet, TextInput, Switch, Alert, ScrollView } from 'react-native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { useNavigation } from '@react-navigation/native';
@@ -6,7 +6,7 @@ import { useNavigation } from '@react-navigation/native';
 import { useTimerStore } from '../../store/timerStore';
 import { useActivityStore } from '../../store/activityStore';
 import { RootStackParamList, Category } from '../../types';
-import Colors from '../../constants/colors';
+import { useTheme } from '../../contexts/ThemeContext';
 import Button from '../../components/common/Button';
 import CategoryPicker from '../../components/activity/CategoryPicker';
 
@@ -14,6 +14,8 @@ export default function ManualAddScreen() {
   const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
   const { startManualTimer, loadRunningTimers } = useTimerStore();
   const { categories, loadCategories } = useActivityStore();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
 
   const [activityName, setActivityName] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
@@ -103,10 +105,10 @@ export default function ManualAddScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ReturnType<typeof useTheme>['theme']) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: theme.background,
   },
   content: {
     padding: 16,
@@ -115,11 +117,11 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: '700',
-    color: Colors.textPrimary,
+    color: theme.textPrimary,
   },
   subtitle: {
     fontSize: 14,
-    color: Colors.textSecondary,
+    color: theme.textSecondary,
     marginTop: 4,
     marginBottom: 16,
   },
@@ -128,17 +130,17 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginTop: 12,
     marginBottom: 6,
-    color: Colors.textPrimary,
+    color: theme.textPrimary,
   },
   input: {
-    backgroundColor: Colors.white,
+    backgroundColor: theme.inputBackground,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: theme.border,
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 16,
-    color: Colors.textPrimary,
+    color: theme.textPrimary,
   },
   row: {
     flexDirection: 'row',
@@ -148,7 +150,7 @@ const styles = StyleSheet.create({
   },
   helperText: {
     fontSize: 12,
-    color: Colors.textSecondary,
+    color: theme.textSecondary,
     marginTop: 4,
     fontStyle: 'italic',
   },

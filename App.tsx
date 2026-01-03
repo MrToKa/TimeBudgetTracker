@@ -7,11 +7,11 @@
 
 import 'react-native-gesture-handler';
 import React, { useEffect } from 'react';
-import { StatusBar, useColorScheme } from 'react-native';
+import { StatusBar } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import AppNavigator from './src/navigation/AppNavigator';
-import Colors from './src/constants/colors';
+import { ThemeProvider, useTheme } from './src/contexts/ThemeContext';
 import {
   setupNotificationChannels,
   requestNotificationPermissions,
@@ -19,8 +19,8 @@ import {
 } from './src/services/notificationService';
 import { useTimerStore } from './src/store/timerStore';
 
-function App() {
-  const isDarkMode = useColorScheme() === 'dark';
+function AppContent() {
+  const { theme } = useTheme();
   const { loadRunningTimers, runningTimers } = useTimerStore();
 
   useEffect(() => {
@@ -48,9 +48,17 @@ function App() {
 
   return (
     <SafeAreaProvider>
-      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} backgroundColor={Colors.primary} />
+      <StatusBar barStyle={theme.statusBarStyle} backgroundColor={theme.primary} />
       <AppNavigator />
     </SafeAreaProvider>
+  );
+}
+
+function App() {
+  return (
+    <ThemeProvider>
+      <AppContent />
+    </ThemeProvider>
   );
 }
 

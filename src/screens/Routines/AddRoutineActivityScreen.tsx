@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -12,7 +12,7 @@ import {
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import Colors from '../../constants/colors';
+import { useTheme } from '../../contexts/ThemeContext';
 import Button from '../../components/common/Button';
 import { Card } from '../../components/common';
 import { RootStackParamList, ActivityWithCategory } from '../../types';
@@ -26,6 +26,8 @@ export default function AddRoutineActivityScreen() {
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<AddRoutineActivityRouteProp>();
   const { routineId } = route.params;
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -89,7 +91,7 @@ export default function AddRoutineActivityScreen() {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={Colors.primary} />
+        <ActivityIndicator size="large" color={theme.primary} />
       </View>
     );
   }
@@ -113,7 +115,7 @@ export default function AddRoutineActivityScreen() {
               onPress={() => setSelectedActivity(null)}
               style={styles.clearButton}
             >
-              <Icon name="close" size={20} color={Colors.error} />
+              <Icon name="close" size={20} color={theme.error} />
             </TouchableOpacity>
           </View>
         </Card>
@@ -121,7 +123,7 @@ export default function AddRoutineActivityScreen() {
         <View style={styles.activityList}>
           {activities.length === 0 ? (
             <Card style={styles.emptyCard}>
-              <Icon name="clipboard-text-outline" size={48} color={Colors.gray300} />
+              <Icon name="clipboard-text-outline" size={48} color={theme.gray300} />
               <Text style={styles.emptyText}>No activities available</Text>
             </Card>
           ) : (
@@ -136,7 +138,7 @@ export default function AddRoutineActivityScreen() {
                     <Text style={styles.activityName}>{activity.name}</Text>
                     <Text style={styles.activityCategory}>{activity.categoryName}</Text>
                   </View>
-                  <Icon name="chevron-right" size={20} color={Colors.textSecondary} />
+                  <Icon name="chevron-right" size={20} color={theme.textSecondary} />
                 </Card>
               </TouchableOpacity>
             ))
@@ -148,7 +150,7 @@ export default function AddRoutineActivityScreen() {
         <>
           <Text style={styles.label}>Scheduled Time (Optional)</Text>
           <View style={styles.inputRow}>
-            <Icon name="clock-outline" size={20} color={Colors.textSecondary} />
+            <Icon name="clock-outline" size={20} color={theme.textSecondary} />
             <TextInput
               style={styles.timeInput}
               placeholder="HH:MM (e.g., 09:30)"
@@ -163,7 +165,7 @@ export default function AddRoutineActivityScreen() {
 
           <Text style={styles.label}>Expected Duration (Optional)</Text>
           <View style={styles.inputRow}>
-            <Icon name="timer-outline" size={20} color={Colors.textSecondary} />
+            <Icon name="timer-outline" size={20} color={theme.textSecondary} />
             <TextInput
               style={styles.timeInput}
               placeholder="Minutes (e.g., 45)"
@@ -188,10 +190,10 @@ export default function AddRoutineActivityScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ReturnType<typeof useTheme>['theme']) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: theme.background,
   },
   content: {
     padding: 16,
@@ -201,24 +203,24 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: Colors.background,
+    backgroundColor: theme.background,
   },
   title: {
     fontSize: 24,
     fontWeight: '700',
-    color: Colors.textPrimary,
+    color: theme.textPrimary,
     marginBottom: 8,
   },
   subtitle: {
     fontSize: 15,
-    color: Colors.textSecondary,
+    color: theme.textSecondary,
     marginBottom: 24,
     lineHeight: 22,
   },
   label: {
     fontSize: 14,
     fontWeight: '600',
-    color: Colors.textPrimary,
+    color: theme.textPrimary,
     marginBottom: 8,
     marginTop: 16,
   },
@@ -236,12 +238,12 @@ const styles = StyleSheet.create({
   selectedName: {
     fontSize: 16,
     fontWeight: '600',
-    color: Colors.textPrimary,
+    color: theme.textPrimary,
     marginBottom: 4,
   },
   selectedCategory: {
     fontSize: 13,
-    color: Colors.textSecondary,
+    color: theme.textSecondary,
   },
   clearButton: {
     padding: 4,
@@ -255,7 +257,7 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 14,
-    color: Colors.textSecondary,
+    color: theme.textSecondary,
     marginTop: 12,
   },
   activityCard: {
@@ -276,20 +278,20 @@ const styles = StyleSheet.create({
   activityName: {
     fontSize: 15,
     fontWeight: '600',
-    color: Colors.textPrimary,
+    color: theme.textPrimary,
     marginBottom: 2,
   },
   activityCategory: {
     fontSize: 12,
-    color: Colors.textSecondary,
+    color: theme.textSecondary,
   },
   inputRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.white,
+    backgroundColor: theme.inputBackground,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: theme.border,
     paddingHorizontal: 12,
     gap: 8,
   },
@@ -297,11 +299,11 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 12,
     fontSize: 16,
-    color: Colors.textPrimary,
+    color: theme.textPrimary,
   },
   helperText: {
     fontSize: 12,
-    color: Colors.textSecondary,
+    color: theme.textSecondary,
     marginTop: 4,
     marginLeft: 4,
   },

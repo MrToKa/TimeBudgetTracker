@@ -1,10 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator, TextInput, Switch, Alert, ScrollView } from 'react-native';
 import { RouteProp, useRoute, useNavigation } from '@react-navigation/native';
 
 import { RootStackParamList, ActivityWithCategory, Category } from '../../types';
 import { useActivityStore } from '../../store/activityStore';
-import Colors from '../../constants/colors';
+import { useTheme } from '../../contexts/ThemeContext';
 import Button from '../../components/common/Button';
 import CategoryPicker from '../../components/activity/CategoryPicker';
 
@@ -12,6 +12,8 @@ export default function ActivityDetailScreen() {
   const navigation = useNavigation();
   const route = useRoute<RouteProp<RootStackParamList, 'ActivityDetail'>>();
   const { getActivityById, activities, loadActivities, updateActivity, categories, loadCategories } = useActivityStore();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   
   const [activity, setActivity] = useState<ActivityWithCategory | undefined>();
   const [loading, setLoading] = useState(true);
@@ -79,7 +81,7 @@ export default function ActivityDetailScreen() {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={Colors.primary} />
+        <ActivityIndicator size="large" color={theme.primary} />
       </View>
     );
   }
@@ -142,10 +144,10 @@ export default function ActivityDetailScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ReturnType<typeof useTheme>['theme']) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: theme.background,
   },
   contentContainer: {
     padding: 16,
@@ -155,17 +157,17 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: Colors.background,
+    backgroundColor: theme.background,
   },
   title: {
     fontSize: 24,
     fontWeight: '700',
-    color: Colors.textPrimary,
+    color: theme.textPrimary,
   },
   sectionTitle: {
     fontSize: 22,
     fontWeight: '700',
-    color: Colors.textPrimary,
+    color: theme.textPrimary,
     marginBottom: 16,
   },
   label: {
@@ -173,17 +175,17 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginTop: 16,
     marginBottom: 8,
-    color: Colors.textPrimary,
+    color: theme.textPrimary,
   },
   input: {
-    backgroundColor: Colors.white,
+    backgroundColor: theme.inputBackground,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: theme.border,
     paddingHorizontal: 12,
     paddingVertical: 12,
     fontSize: 16,
-    color: Colors.textPrimary,
+    color: theme.textPrimary,
   },
   row: {
     flexDirection: 'row',
@@ -192,14 +194,14 @@ const styles = StyleSheet.create({
     marginTop: 16,
     paddingVertical: 8,
     paddingHorizontal: 4,
-    backgroundColor: Colors.white,
+    backgroundColor: theme.surface,
     borderRadius: 8,
     paddingRight: 12,
     paddingLeft: 12,
   },
   rowLabel: {
     fontSize: 16,
-    color: Colors.textPrimary,
+    color: theme.textPrimary,
   },
   buttonContainer: {
     marginTop: 24,

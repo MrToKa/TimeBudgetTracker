@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { View, Text, StyleSheet, ScrollView, ActivityIndicator, RefreshControl, Alert } from 'react-native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { useNavigation } from '@react-navigation/native';
@@ -6,18 +6,21 @@ import { useNavigation } from '@react-navigation/native';
 import { useActivityStore } from '../../store/activityStore';
 import { useTimerStore } from '../../store/timerStore';
 import { RootStackParamList } from '../../types';
-import Colors from '../../constants/colors';
+import { useTheme } from '../../contexts/ThemeContext';
 import Button from '../../components/common/Button';
 import ActivityCard from '../../components/activity/ActivityCard';
 import CategoryPicker from '../../components/activity/CategoryPicker';
 
 export default function ActivitiesScreen() {
   const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
+  const { theme } = useTheme();
   const { activities, categories, loadActivities, loadCategories, toggleFavorite } = useActivityStore();
   const { startTimer, loadRunningTimers } = useTimerStore();
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+
+  const styles = useMemo(() => createStyles(theme), [theme]);
 
   useEffect(() => {
     const load = async () => {
@@ -52,7 +55,7 @@ export default function ActivitiesScreen() {
     <ScrollView
       style={styles.container}
       contentContainerStyle={styles.content}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[theme.primary]} />}
     >
       <View style={styles.header}>
         <Text style={styles.title}>Activities</Text>
@@ -66,7 +69,7 @@ export default function ActivitiesScreen() {
       </View>
 
       {loading ? (
-        <ActivityIndicator size="large" color={Colors.primary} />
+        <ActivityIndicator size="large" color={theme.primary} />
       ) : (
         <>
           <CategoryPicker
@@ -95,10 +98,10 @@ export default function ActivitiesScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ReturnType<typeof useTheme>['theme']) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: theme.background,
   },
   content: {
     paddingBottom: 24,
@@ -111,11 +114,11 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: '700',
-    color: Colors.textPrimary,
+    color: theme.textPrimary,
   },
   subtitle: {
     fontSize: 14,
-    color: Colors.textSecondary,
+    color: theme.textSecondary,
     marginTop: 4,
   },
   actions: {
@@ -125,6 +128,6 @@ const styles = StyleSheet.create({
   emptyText: {
     paddingHorizontal: 16,
     paddingVertical: 12,
-    color: Colors.textSecondary,
+    color: theme.textSecondary,
   },
 });

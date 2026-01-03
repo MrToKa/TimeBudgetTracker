@@ -9,7 +9,7 @@ import {
   TextStyle,
   ActivityIndicator,
 } from 'react-native';
-import Colors from '../../constants/colors';
+import { useTheme } from '../../contexts/ThemeContext';
 
 interface ButtonProps {
   title: string;
@@ -34,6 +34,8 @@ export default function Button({
   textStyle,
   icon,
 }: ButtonProps) {
+  const { theme } = useTheme();
+
   const getButtonStyle = (): ViewStyle => {
     const base: ViewStyle = {
       flexDirection: 'row',
@@ -60,21 +62,21 @@ export default function Button({
     // Variant styles
     switch (variant) {
       case 'secondary':
-        base.backgroundColor = Colors.secondary;
+        base.backgroundColor = theme.secondary;
         break;
       case 'outline':
         base.backgroundColor = 'transparent';
         base.borderWidth = 2;
-        base.borderColor = Colors.primary;
+        base.borderColor = theme.primary;
         break;
       case 'danger':
-        base.backgroundColor = Colors.error;
+        base.backgroundColor = theme.error;
         break;
       case 'success':
-        base.backgroundColor = Colors.success;
+        base.backgroundColor = theme.success;
         break;
       default:
-        base.backgroundColor = Colors.primary;
+        base.backgroundColor = theme.primary;
     }
 
     // Disabled state
@@ -105,10 +107,10 @@ export default function Button({
     // Variant styles
     switch (variant) {
       case 'outline':
-        base.color = Colors.primary;
+        base.color = theme.primary;
         break;
       default:
-        base.color = Colors.white;
+        base.color = theme.white;
     }
 
     return base;
@@ -123,7 +125,7 @@ export default function Button({
     >
       {loading ? (
         <ActivityIndicator 
-          color={variant === 'outline' ? Colors.primary : Colors.white} 
+          color={variant === 'outline' ? theme.primary : theme.white} 
           style={{ marginRight: title ? 8 : 0 }}
         />
       ) : icon ? (

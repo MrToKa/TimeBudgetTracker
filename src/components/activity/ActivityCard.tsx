@@ -1,10 +1,10 @@
 // Activity Card Component
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { ActivityWithCategory } from '../../types';
-import Colors from '../../constants/colors';
+import { useTheme } from '../../contexts/ThemeContext';
 import { formatDuration } from '../../utils/dateUtils';
 
 interface ActivityCardProps {
@@ -24,6 +24,9 @@ export default function ActivityCard({
   showStartButton = true,
   compact = false,
 }: ActivityCardProps) {
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
+
   return (
     <TouchableOpacity 
       style={[styles.container, compact && styles.containerCompact]}
@@ -46,7 +49,7 @@ export default function ActivityCard({
           </Text>
           
           {activity.isFavorite && (
-            <Icon name="heart" size={16} color={Colors.error} style={styles.favoriteIcon} />
+            <Icon name="heart" size={16} color={theme.error} style={styles.favoriteIcon} />
           )}
         </View>
         
@@ -75,7 +78,7 @@ export default function ActivityCard({
             <Icon 
               name={activity.isFavorite ? 'heart' : 'heart-outline'} 
               size={24} 
-              color={activity.isFavorite ? Colors.error : Colors.gray400} 
+              color={activity.isFavorite ? theme.error : theme.gray400} 
             />
           </TouchableOpacity>
         )}
@@ -85,25 +88,25 @@ export default function ActivityCard({
             style={[styles.startButton, { backgroundColor: activity.categoryColor }]}
             onPress={onStartTimer}
           >
-            <Icon name="play" size={24} color={Colors.white} />
+            <Icon name="play" size={24} color={theme.white} />
           </TouchableOpacity>
         )}
         
-        <Icon name="chevron-right" size={24} color={Colors.gray300} />
+        <Icon name="chevron-right" size={24} color={theme.gray300} />
       </View>
     </TouchableOpacity>
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ReturnType<typeof useTheme>['theme']) => StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.white,
+    backgroundColor: theme.cardBackground,
     paddingVertical: 16,
     paddingHorizontal: 16,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
+    borderBottomColor: theme.border,
   },
   containerCompact: {
     paddingVertical: 12,
@@ -127,7 +130,7 @@ const styles = StyleSheet.create({
   name: {
     fontSize: 16,
     fontWeight: '600',
-    color: Colors.textPrimary,
+    color: theme.textPrimary,
     flex: 1,
   },
   nameCompact: {
@@ -138,12 +141,12 @@ const styles = StyleSheet.create({
   },
   category: {
     fontSize: 14,
-    color: Colors.textSecondary,
+    color: theme.textSecondary,
     marginTop: 2,
   },
   duration: {
     fontSize: 13,
-    color: Colors.textTertiary,
+    color: theme.textTertiary,
     marginTop: 2,
   },
   actions: {

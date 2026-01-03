@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -14,7 +14,7 @@ import {
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import Colors from '../../constants/colors';
+import { useTheme } from '../../contexts/ThemeContext';
 import { Button, Card } from '../../components/common';
 import { Goal, GoalType, GoalScope } from '../../types';
 import { getGoalById, updateGoal } from '../../database/repositories/goalRepository';
@@ -28,9 +28,9 @@ type RootStackParamList = {
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 type EditGoalRouteProp = RouteProp<RootStackParamList, 'EditGoal'>;
 
-const GOAL_TYPES: { value: GoalType; label: string; icon: string; color: string; description: string }[] = [
-  { value: 'min', label: 'Minimum', icon: 'arrow-up-bold-circle', color: Colors.success, description: 'Spend at least this much time' },
-  { value: 'max', label: 'Maximum', icon: 'arrow-down-bold-circle', color: Colors.error, description: 'Spend at most this much time' },
+const getGoalTypes = (theme: ReturnType<typeof useTheme>['theme']): { value: GoalType; label: string; icon: string; color: string; description: string }[] => [
+  { value: 'min', label: 'Minimum', icon: 'arrow-up-bold-circle', color: theme.success, description: 'Spend at least this much time' },
+  { value: 'max', label: 'Maximum', icon: 'arrow-down-bold-circle', color: theme.error, description: 'Spend at most this much time' },
 ];
 
 const GOAL_SCOPES: { value: GoalScope; label: string; icon: string }[] = [
@@ -43,6 +43,9 @@ export default function EditGoalScreen() {
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<EditGoalRouteProp>();
   const { goalId } = route.params;
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
+  const GOAL_TYPES = useMemo(() => getGoalTypes(theme), [theme]);
 
   const [loading, setLoading] = useState(true);
   const [activityName, setActivityName] = useState('');
@@ -129,7 +132,7 @@ export default function EditGoalScreen() {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={Colors.primary} />
+        <ActivityIndicator size="large" color={theme.primary} />
       </View>
     );
   }
@@ -146,7 +149,7 @@ export default function EditGoalScreen() {
         <Card style={styles.section}>
           <Text style={styles.sectionTitle}>Activity</Text>
           <View style={styles.activityDisplay}>
-            <Icon name="flag-checkered" size={20} color={Colors.primary} />
+            <Icon name="flag-checkered" size={20} color={theme.primary} />
             <View style={styles.activityInfo}>
               <Text style={styles.activityName}>{activityName}</Text>
               <Text style={styles.activityCategory}>{categoryName}</Text>
@@ -171,7 +174,7 @@ export default function EditGoalScreen() {
                 <Icon
                   name={type.icon}
                   size={24}
-                  color={goalType === type.value ? type.color : Colors.textSecondary}
+                  color={goalType === type.value ? type.color : theme.textSecondary}
                 />
                 <Text
                   style={[
@@ -203,7 +206,7 @@ export default function EditGoalScreen() {
                 <Icon
                   name={s.icon}
                   size={20}
-                  color={scope === s.value ? Colors.primary : Colors.textSecondary}
+                  color={scope === s.value ? theme.primary : theme.textSecondary}
                 />
                 <Text
                   style={[
@@ -229,7 +232,7 @@ export default function EditGoalScreen() {
                 onChangeText={setHours}
                 keyboardType="numeric"
                 placeholder="0"
-                placeholderTextColor={Colors.textTertiary}
+                placeholderTextColor={theme.textTertiary}
                 maxLength={3}
               />
               <Text style={styles.timeLabel}>hours</Text>
@@ -241,7 +244,7 @@ export default function EditGoalScreen() {
                 onChangeText={setMinutes}
                 keyboardType="numeric"
                 placeholder="0"
-                placeholderTextColor={Colors.textTertiary}
+                placeholderTextColor={theme.textTertiary}
                 maxLength={2}
               />
               <Text style={styles.timeLabel}>minutes</Text>
@@ -265,16 +268,16 @@ export default function EditGoalScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ReturnType<typeof useTheme>['theme']) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: theme.background,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: Colors.background,
+    backgroundColor: theme.background,
   },
   scrollView: {
     flex: 1,
@@ -286,7 +289,7 @@ const styles = StyleSheet.create({
   screenTitle: {
     fontSize: 28,
     fontWeight: '700',
-    color: Colors.textPrimary,
+    color: theme.textPrimary,
     marginBottom: 20,
   },
   section: {
@@ -295,14 +298,14 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: Colors.textPrimary,
+    color: theme.textPrimary,
     marginBottom: 12,
   },
   activityDisplay: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 12,
-    backgroundColor: Colors.gray50,
+    backgroundColor: theme.gray50,
     borderRadius: 8,
   },
   activityInfo: {
@@ -312,11 +315,11 @@ const styles = StyleSheet.create({
   activityName: {
     fontSize: 16,
     fontWeight: '600',
-    color: Colors.textPrimary,
+    color: theme.textPrimary,
   },
   activityCategory: {
     fontSize: 13,
-    color: Colors.textSecondary,
+    color: theme.textSecondary,
     marginTop: 2,
   },
   optionGroup: {
@@ -325,22 +328,22 @@ const styles = StyleSheet.create({
   optionButton: {
     padding: 16,
     borderWidth: 2,
-    borderColor: Colors.border,
+    borderColor: theme.border,
     borderRadius: 12,
-    backgroundColor: Colors.white,
+    backgroundColor: theme.surface,
   },
   optionButtonSelected: {
-    backgroundColor: Colors.gray50,
+    backgroundColor: theme.gray50,
   },
   optionLabel: {
     fontSize: 16,
     fontWeight: '600',
-    color: Colors.textPrimary,
+    color: theme.textPrimary,
     marginTop: 8,
   },
   optionDescription: {
     fontSize: 13,
-    color: Colors.textSecondary,
+    color: theme.textSecondary,
     marginTop: 4,
   },
   scopeGroup: {
@@ -354,22 +357,22 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: 14,
     borderWidth: 2,
-    borderColor: Colors.border,
+    borderColor: theme.border,
     borderRadius: 12,
-    backgroundColor: Colors.white,
+    backgroundColor: theme.surface,
     gap: 8,
   },
   scopeButtonSelected: {
-    borderColor: Colors.primary,
-    backgroundColor: Colors.primary + '10',
+    borderColor: theme.primary,
+    backgroundColor: theme.primary + '10',
   },
   scopeLabel: {
     fontSize: 14,
     fontWeight: '500',
-    color: Colors.textSecondary,
+    color: theme.textSecondary,
   },
   scopeLabelSelected: {
-    color: Colors.primary,
+    color: theme.primary,
     fontWeight: '600',
   },
   timeInputs: {
@@ -384,25 +387,25 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 56,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: theme.border,
     borderRadius: 12,
     fontSize: 24,
     fontWeight: '600',
     textAlign: 'center',
-    color: Colors.textPrimary,
-    backgroundColor: Colors.white,
+    color: theme.textPrimary,
+    backgroundColor: theme.inputBackground,
   },
   timeLabel: {
     marginTop: 8,
     fontSize: 14,
-    color: Colors.textSecondary,
+    color: theme.textSecondary,
   },
   totalTime: {
     marginTop: 16,
     textAlign: 'center',
     fontSize: 15,
     fontWeight: '500',
-    color: Colors.primary,
+    color: theme.primary,
   },
   saveButton: {
     marginTop: 8,

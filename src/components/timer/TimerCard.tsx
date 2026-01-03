@@ -1,10 +1,10 @@
 // Timer Card Component - Shows a running timer
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { RunningTimer } from '../../types';
-import Colors from '../../constants/colors';
+import { useTheme } from '../../contexts/ThemeContext';
 import { formatTimerDisplay, formatDuration } from '../../utils/dateUtils';
 import Card from '../common/Card';
 
@@ -15,7 +15,9 @@ interface TimerCardProps {
 }
 
 export default function TimerCard({ timer, onStop, onPress }: TimerCardProps) {
+  const { theme } = useTheme();
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const styles = useMemo(() => createStyles(theme), [theme]);
 
   useEffect(() => {
     // Calculate initial elapsed time
@@ -46,7 +48,7 @@ export default function TimerCard({ timer, onStop, onPress }: TimerCardProps) {
         <View 
           style={[
             styles.colorBar, 
-            { backgroundColor: isOverBudget ? Colors.error : (timer.categoryColor || Colors.gray400) }
+            { backgroundColor: isOverBudget ? theme.error : (timer.categoryColor || theme.gray400) }
           ]} 
         />
         
@@ -64,7 +66,7 @@ export default function TimerCard({ timer, onStop, onPress }: TimerCardProps) {
           {/* Planned/Unplanned Badge */}
           <View style={[
             styles.badge,
-            { backgroundColor: timer.isPlanned ? Colors.planned : Colors.unplanned }
+            { backgroundColor: timer.isPlanned ? theme.planned : theme.unplanned }
           ]}>
             <Text style={styles.badgeText}>
               {timer.isPlanned ? 'Planned' : 'Unplanned'}
@@ -101,14 +103,14 @@ export default function TimerCard({ timer, onStop, onPress }: TimerCardProps) {
           style={styles.stopButton}
           onPress={onStop}
         >
-          <Icon name="close-circle" size={28} color={Colors.white} />
+          <Icon name="close-circle" size={28} color={theme.white} />
         </TouchableOpacity>
       </TouchableOpacity>
     </Card>
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ReturnType<typeof useTheme>['theme']) => StyleSheet.create({
   container: {
     marginHorizontal: 16,
     marginVertical: 8,
@@ -116,8 +118,8 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   containerOverBudget: {
-    backgroundColor: '#FEE2E2', // Light red background
-    borderColor: Colors.error,
+    backgroundColor: theme.errorLight,
+    borderColor: theme.error,
     borderWidth: 2,
   },
   content: {
@@ -139,12 +141,12 @@ const styles = StyleSheet.create({
   activityName: {
     fontSize: 18,
     fontWeight: '600',
-    color: Colors.textPrimary,
+    color: theme.textPrimary,
     marginBottom: 4,
   },
   categoryName: {
     fontSize: 14,
-    color: Colors.textSecondary,
+    color: theme.textSecondary,
     marginBottom: 8,
   },
   badge: {
@@ -156,7 +158,7 @@ const styles = StyleSheet.create({
   badgeText: {
     fontSize: 12,
     fontWeight: '500',
-    color: Colors.white,
+    color: theme.white,
   },
   timerSection: {
     alignItems: 'flex-end',
@@ -165,19 +167,19 @@ const styles = StyleSheet.create({
   timerText: {
     fontSize: 24,
     fontWeight: '700',
-    color: Colors.timerRunning,
+    color: theme.timerRunning,
     fontVariant: ['tabular-nums'],
   },
   timerOverBudget: {
-    color: Colors.error,
+    color: theme.error,
   },
   budgetText: {
     fontSize: 14,
-    color: Colors.textSecondary,
+    color: theme.textSecondary,
     marginTop: 2,
   },
   budgetOverBudget: {
-    color: Colors.error,
+    color: theme.error,
     fontWeight: '600',
   },
   runningIndicator: {
@@ -189,26 +191,26 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: Colors.timerRunning,
+    backgroundColor: theme.timerRunning,
     marginRight: 4,
   },
   runningDotOverBudget: {
-    backgroundColor: Colors.error,
+    backgroundColor: theme.error,
   },
   runningText: {
     fontSize: 12,
-    color: Colors.timerRunning,
+    color: theme.timerRunning,
     fontWeight: '500',
   },
   runningTextOverBudget: {
-    color: Colors.error,
+    color: theme.error,
     fontWeight: '700',
   },
   stopButton: {
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: Colors.error,
+    backgroundColor: theme.error,
     justifyContent: 'center',
     alignItems: 'center',
   },

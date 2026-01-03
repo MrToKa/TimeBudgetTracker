@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -11,7 +11,7 @@ import {
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import Colors from '../../constants/colors';
+import { useTheme } from '../../contexts/ThemeContext';
 import { Card, Button } from '../../components/common';
 import { Routine, RoutineType, RootStackParamList } from '../../types';
 import { getAllRoutines, deleteRoutine, toggleRoutineActive } from '../../database/repositories/routineRepository';
@@ -30,6 +30,8 @@ const ROUTINE_TYPE_LABELS: Record<RoutineType, string> = {
 
 export default function RoutinesScreen() {
   const navigation = useNavigation<NavigationProp>();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const [routines, setRoutines] = useState<Routine[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -92,13 +94,13 @@ export default function RoutinesScreen() {
 
   const renderRoutineItem = ({ item }: { item: Routine }) => {
     return (
-      <Card style={[styles.routineCard, !item.isActive && styles.routineCardInactive]}>
-        <View style={styles.routineHeader}>
-          <View style={[styles.routineIcon, { backgroundColor: Colors.secondary + '15' }]}>
+      <Card style={[styles.routineCard, !item.isActive && styles.inactiveCard]}>
+        <View style={styles.routineRow}>
+          <View style={[styles.routineIcon, { backgroundColor: theme.secondary + '15' }]}>
             <Icon
               name={ROUTINE_TYPE_ICONS[item.routineType]}
               size={24}
-              color={item.isActive ? Colors.secondary : Colors.gray400}
+              color={item.isActive ? theme.secondary : theme.gray400}
             />
           </View>
           <View style={styles.routineInfo}>
@@ -113,20 +115,20 @@ export default function RoutinesScreen() {
               <Icon
                 name={item.isActive ? 'pause-circle' : 'play-circle'}
                 size={24}
-                color={item.isActive ? Colors.warning : Colors.success}
+                color={item.isActive ? theme.warning : theme.success}
               />
             </TouchableOpacity>
             <TouchableOpacity
               onPress={() => navigation.navigate('RoutineDetail', { routineId: item.id })}
               style={styles.actionButton}
             >
-              <Icon name="pencil" size={20} color={Colors.textSecondary} />
+              <Icon name="pencil" size={20} color={theme.textSecondary} />
             </TouchableOpacity>
             <TouchableOpacity
               onPress={() => handleDeleteRoutine(item)}
               style={styles.actionButton}
             >
-              <Icon name="delete" size={20} color={Colors.error} />
+              <Icon name="delete" size={20} color={theme.error} />
             </TouchableOpacity>
           </View>
         </View>
@@ -136,7 +138,7 @@ export default function RoutinesScreen() {
 
   const renderEmptyState = () => (
     <View style={styles.emptyState}>
-      <Icon name="calendar-clock" size={64} color={Colors.gray300} />
+      <Icon name="calendar-clock" size={64} color={theme.gray300} />
       <Text style={styles.emptyTitle}>No Routines Yet</Text>
       <Text style={styles.emptySubtitle}>
         Create routines to schedule your daily{'\n'}or weekly activities automatically
@@ -156,7 +158,7 @@ export default function RoutinesScreen() {
       </View>
 
       <View style={styles.infoCard}>
-        <Icon name="information" size={20} color={Colors.info} />
+        <Icon name="information" size={20} color={theme.info} />
         <Text style={styles.infoText}>
           Routines let you define templates for your day or week. 
           Activities in a routine can be started with one tap.
@@ -170,7 +172,7 @@ export default function RoutinesScreen() {
         contentContainerStyle={styles.listContent}
         ListEmptyComponent={!loading ? renderEmptyState : null}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[Colors.primary]} />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[theme.primary]} />
         }
       />
 
@@ -178,16 +180,16 @@ export default function RoutinesScreen() {
         style={styles.fab}
         onPress={() => navigation.navigate('CreateRoutine')}
       >
-        <Icon name="plus" size={28} color={Colors.white} />
+        <Icon name="plus" size={28} color={theme.white} />
       </TouchableOpacity>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ReturnType<typeof useTheme>['theme']) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: theme.background,
   },
   header: {
     padding: 16,
@@ -196,7 +198,7 @@ const styles = StyleSheet.create({
   screenTitle: {
     fontSize: 28,
     fontWeight: '700',
-    color: Colors.textPrimary,
+    color: theme.textPrimary,
   },
   infoCard: {
     flexDirection: 'row',
@@ -204,14 +206,14 @@ const styles = StyleSheet.create({
     marginHorizontal: 16,
     marginBottom: 16,
     padding: 12,
-    backgroundColor: Colors.info + '10',
+    backgroundColor: theme.info + '10',
     borderRadius: 10,
   },
   infoText: {
     flex: 1,
     marginLeft: 10,
     fontSize: 13,
-    color: Colors.textSecondary,
+    color: theme.textSecondary,
     lineHeight: 19,
   },
   listContent: {
@@ -221,8 +223,15 @@ const styles = StyleSheet.create({
   routineCard: {
     marginBottom: 12,
   },
+  inactiveCard: {
+    opacity: 0.6,
+  },
   routineCardInactive: {
     opacity: 0.6,
+  },
+  routineRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   routineHeader: {
     flexDirection: 'row',
@@ -242,11 +251,11 @@ const styles = StyleSheet.create({
   routineName: {
     fontSize: 17,
     fontWeight: '600',
-    color: Colors.textPrimary,
+    color: theme.textPrimary,
   },
   routineType: {
     fontSize: 13,
-    color: Colors.textSecondary,
+    color: theme.textSecondary,
     marginTop: 2,
   },
   routineActions: {
@@ -266,12 +275,12 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 20,
     fontWeight: '600',
-    color: Colors.textPrimary,
+    color: theme.textPrimary,
     marginTop: 16,
   },
   emptySubtitle: {
     fontSize: 14,
-    color: Colors.textSecondary,
+    color: theme.textSecondary,
     textAlign: 'center',
     marginTop: 8,
     lineHeight: 20,
@@ -287,7 +296,7 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: Colors.secondary,
+    backgroundColor: theme.secondary,
     justifyContent: 'center',
     alignItems: 'center',
     elevation: 4,

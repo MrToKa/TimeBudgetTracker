@@ -1,10 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { View, Text, StyleSheet, TextInput, Switch, Alert } from 'react-native';
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 
 import { RootStackParamList, Category } from '../../types';
 import { useActivityStore } from '../../store/activityStore';
-import Colors from '../../constants/colors';
+import { useTheme } from '../../contexts/ThemeContext';
 import Button from '../../components/common/Button';
 import CategoryPicker from '../../components/activity/CategoryPicker';
 
@@ -12,6 +12,8 @@ export default function EditActivityScreen() {
   const navigation = useNavigation();
   const route = useRoute<RouteProp<RootStackParamList, 'EditActivity'>>();
   const { activities, loadActivities, createActivity, updateActivity, categories, loadCategories } = useActivityStore();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
 
   const [name, setName] = useState('');
   const [category, setCategory] = useState<Category | null>(null);
@@ -120,16 +122,16 @@ export default function EditActivityScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ReturnType<typeof useTheme>['theme']) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: theme.background,
     padding: 16,
   },
   title: {
     fontSize: 22,
     fontWeight: '700',
-    color: Colors.textPrimary,
+    color: theme.textPrimary,
     marginBottom: 12,
   },
   label: {
@@ -137,17 +139,17 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginTop: 12,
     marginBottom: 6,
-    color: Colors.textPrimary,
+    color: theme.textPrimary,
   },
   input: {
-    backgroundColor: Colors.white,
+    backgroundColor: theme.inputBackground,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: theme.border,
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 16,
-    color: Colors.textPrimary,
+    color: theme.textPrimary,
   },
   row: {
     flexDirection: 'row',

@@ -1,10 +1,10 @@
 // Category Picker Component
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { Category } from '../../types';
-import Colors from '../../constants/colors';
+import { useTheme } from '../../contexts/ThemeContext';
 
 interface CategoryPickerProps {
   categories: Category[];
@@ -19,6 +19,9 @@ export default function CategoryPicker({
   onSelect,
   horizontal = false,
 }: CategoryPickerProps) {
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
+
   if (horizontal) {
     return (
       <ScrollView 
@@ -39,12 +42,12 @@ export default function CategoryPicker({
             <Icon 
               name={category.icon || 'category'} 
               size={20} 
-              color={selectedCategoryId === category.id ? Colors.white : category.color} 
+              color={selectedCategoryId === category.id ? theme.white : category.color} 
             />
             <Text 
               style={[
                 styles.horizontalItemText,
-                { color: selectedCategoryId === category.id ? Colors.white : Colors.textPrimary },
+                { color: selectedCategoryId === category.id ? theme.white : theme.textPrimary },
               ]}
               numberOfLines={1}
             >
@@ -76,7 +79,7 @@ export default function CategoryPicker({
           />
           <Text style={styles.itemText}>{category.name}</Text>
           {selectedCategoryId === category.id && (
-            <Icon name="check" size={24} color={Colors.primary} />
+            <Icon name="check" size={24} color={theme.primary} />
           )}
         </TouchableOpacity>
       ))}
@@ -84,9 +87,9 @@ export default function CategoryPicker({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ReturnType<typeof useTheme>['theme']) => StyleSheet.create({
   container: {
-    backgroundColor: Colors.white,
+    backgroundColor: theme.cardBackground,
     borderRadius: 12,
     overflow: 'hidden',
   },
@@ -96,10 +99,10 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     paddingHorizontal: 16,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
+    borderBottomColor: theme.border,
   },
   itemSelected: {
-    backgroundColor: Colors.gray50,
+    backgroundColor: theme.surface,
   },
   colorDot: {
     width: 12,
@@ -113,7 +116,7 @@ const styles = StyleSheet.create({
   itemText: {
     flex: 1,
     fontSize: 16,
-    color: Colors.textPrimary,
+    color: theme.textPrimary,
   },
   horizontalContainer: {
     paddingHorizontal: 16,

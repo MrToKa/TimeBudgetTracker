@@ -9,7 +9,7 @@ import {
   Alert,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-import Colors from '../../constants/colors';
+import { useTheme, ThemeMode } from '../../contexts/ThemeContext';
 import { Card } from '../../components/common';
 import { AppSettings, DEFAULT_SETTINGS } from '../../types';
 import { getSetting, setSetting, getAllSettings } from '../../database/repositories/settingsRepository';
@@ -97,6 +97,7 @@ const SETTINGS_CONFIG: { section: string; items: SettingItem[] }[] = [
 ];
 
 export default function SettingsScreen() {
+  const { theme, themeMode, setThemeMode } = useTheme();
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
   const [loading, setLoading] = useState(true);
 
@@ -159,24 +160,52 @@ export default function SettingsScreen() {
     );
   };
 
+  const handleThemeChange = () => {
+    const options: { text: string; mode: ThemeMode }[] = [
+      { text: 'Light', mode: 'light' },
+      { text: 'Dark', mode: 'dark' },
+      { text: 'System Default', mode: 'system' },
+    ];
+    
+    Alert.alert(
+      'Choose Theme',
+      'Select your preferred appearance:',
+      [
+        ...options.map(opt => ({
+          text: opt.text + (themeMode === opt.mode ? ' ✓' : ''),
+          onPress: () => setThemeMode(opt.mode),
+        })),
+        { text: 'Cancel', style: 'cancel' as const },
+      ]
+    );
+  };
+
+  const getThemeModeLabel = () => {
+    switch (themeMode) {
+      case 'light': return 'Light';
+      case 'dark': return 'Dark';
+      case 'system': return 'System';
+    }
+  };
+
   const renderSettingItem = (item: SettingItem) => {
     const value = settings[item.key];
 
     if (item.type === 'switch') {
       return (
-        <View key={item.key} style={styles.settingRow}>
-          <View style={styles.settingIcon}>
-            <Icon name={item.icon} size={22} color={Colors.primary} />
+        <View key={item.key} style={[styles.settingRow, { borderBottomColor: theme.border }]}>
+          <View style={[styles.settingIcon, { backgroundColor: theme.primary + '15' }]}>
+            <Icon name={item.icon} size={22} color={theme.primary} />
           </View>
           <View style={styles.settingText}>
-            <Text style={styles.settingTitle}>{item.title}</Text>
-            <Text style={styles.settingSubtitle}>{item.subtitle}</Text>
+            <Text style={[styles.settingTitle, { color: theme.textPrimary }]}>{item.title}</Text>
+            <Text style={[styles.settingSubtitle, { color: theme.textSecondary }]}>{item.subtitle}</Text>
           </View>
           <Switch
             value={value as boolean}
             onValueChange={(newValue) => updateSetting(item.key, newValue)}
-            trackColor={{ false: Colors.gray300, true: Colors.primaryLight }}
-            thumbColor={value ? Colors.primary : Colors.gray400}
+            trackColor={{ false: theme.border, true: theme.primaryLight }}
+            thumbColor={value ? theme.primary : theme.textTertiary}
           />
         </View>
       );
@@ -186,19 +215,19 @@ export default function SettingsScreen() {
       return (
         <TouchableOpacity
           key={item.key}
-          style={styles.settingRow}
+          style={[styles.settingRow, { borderBottomColor: theme.border }]}
           onPress={() => handleNumberSetting(item.key, value as number)}
         >
-          <View style={styles.settingIcon}>
-            <Icon name={item.icon} size={22} color={Colors.primary} />
+          <View style={[styles.settingIcon, { backgroundColor: theme.primary + '15' }]}>
+            <Icon name={item.icon} size={22} color={theme.primary} />
           </View>
           <View style={styles.settingText}>
-            <Text style={styles.settingTitle}>{item.title}</Text>
-            <Text style={styles.settingSubtitle}>{item.subtitle}</Text>
+            <Text style={[styles.settingTitle, { color: theme.textPrimary }]}>{item.title}</Text>
+            <Text style={[styles.settingSubtitle, { color: theme.textSecondary }]}>{item.subtitle}</Text>
           </View>
           <View style={styles.settingValue}>
-            <Text style={styles.settingValueText}>{value} min</Text>
-            <Icon name="chevron-right" size={20} color={Colors.textSecondary} />
+            <Text style={[styles.settingValueText, { color: theme.textSecondary }]}>{value} min</Text>
+            <Icon name="chevron-right" size={20} color={theme.textSecondary} />
           </View>
         </TouchableOpacity>
       );
@@ -233,32 +262,50 @@ export default function SettingsScreen() {
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.screenTitle}>Settings</Text>
+    <ScrollView style={[styles.container, { backgroundColor: theme.background }]} contentContainerStyle={styles.content}>
+      <Text style={[styles.screenTitle, { color: theme.textPrimary }]}>Settings</Text>
+
+      {/* Appearance Section */}
+      <Card style={[styles.section, { backgroundColor: theme.surface }]}>
+        <Text style={[styles.sectionTitle, { color: theme.textSecondary, backgroundColor: theme.surfaceElevated }]}>Appearance</Text>
+        <TouchableOpacity style={[styles.settingRow, { borderBottomColor: theme.border }]} onPress={handleThemeChange}>
+          <View style={[styles.settingIcon, { backgroundColor: theme.secondary + '15' }]}>
+            <Icon name="theme-light-dark" size={22} color={theme.secondary} />
+          </View>
+          <View style={styles.settingText}>
+            <Text style={[styles.settingTitle, { color: theme.textPrimary }]}>Theme</Text>
+            <Text style={[styles.settingSubtitle, { color: theme.textSecondary }]}>Choose light, dark, or system theme</Text>
+          </View>
+          <View style={styles.settingValue}>
+            <Text style={[styles.settingValueText, { color: theme.textSecondary }]}>{getThemeModeLabel()}</Text>
+            <Icon name="chevron-right" size={20} color={theme.textSecondary} />
+          </View>
+        </TouchableOpacity>
+      </Card>
 
       {SETTINGS_CONFIG.map((section) => (
-        <Card key={section.section} style={styles.section}>
-          <Text style={styles.sectionTitle}>{section.section}</Text>
+        <Card key={section.section} style={[styles.section, { backgroundColor: theme.surface }]}>
+          <Text style={[styles.sectionTitle, { color: theme.textSecondary, backgroundColor: theme.surfaceElevated }]}>{section.section}</Text>
           {section.items.map(renderSettingItem)}
         </Card>
       ))}
 
-      <Card style={styles.section}>
-        <Text style={styles.sectionTitle}>Data</Text>
-        <TouchableOpacity style={styles.settingRow} onPress={handleResetSettings}>
-          <View style={[styles.settingIcon, { backgroundColor: Colors.error + '15' }]}>
-            <Icon name="refresh" size={22} color={Colors.error} />
+      <Card style={[styles.section, { backgroundColor: theme.surface }]}>
+        <Text style={[styles.sectionTitle, { color: theme.textSecondary, backgroundColor: theme.surfaceElevated }]}>Data</Text>
+        <TouchableOpacity style={[styles.settingRow, { borderBottomColor: theme.border }]} onPress={handleResetSettings}>
+          <View style={[styles.settingIcon, { backgroundColor: theme.error + '15' }]}>
+            <Icon name="refresh" size={22} color={theme.error} />
           </View>
           <View style={styles.settingText}>
-            <Text style={[styles.settingTitle, { color: Colors.error }]}>Reset to Defaults</Text>
-            <Text style={styles.settingSubtitle}>Restore all settings to their original values</Text>
+            <Text style={[styles.settingTitle, { color: theme.error }]}>Reset to Defaults</Text>
+            <Text style={[styles.settingSubtitle, { color: theme.textSecondary }]}>Restore all settings to their original values</Text>
           </View>
-          <Icon name="chevron-right" size={20} color={Colors.textSecondary} />
+          <Icon name="chevron-right" size={20} color={theme.textSecondary} />
         </TouchableOpacity>
       </Card>
 
       <View style={styles.footer}>
-        <Text style={styles.footerText}>Some features may require app restart</Text>
+        <Text style={[styles.footerText, { color: theme.textTertiary }]}>Some features may require app restart</Text>
       </View>
     </ScrollView>
   );
@@ -267,7 +314,6 @@ export default function SettingsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
   },
   content: {
     padding: 16,
@@ -276,7 +322,6 @@ const styles = StyleSheet.create({
   screenTitle: {
     fontSize: 28,
     fontWeight: '700',
-    color: Colors.textPrimary,
     marginBottom: 20,
   },
   section: {
@@ -287,26 +332,22 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 14,
     fontWeight: '600',
-    color: Colors.textSecondary,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
     paddingHorizontal: 16,
     paddingTop: 16,
     paddingBottom: 8,
-    backgroundColor: Colors.gray50,
   },
   settingRow: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
   },
   settingIcon: {
     width: 40,
     height: 40,
     borderRadius: 10,
-    backgroundColor: Colors.primary + '15',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 14,
@@ -317,11 +358,9 @@ const styles = StyleSheet.create({
   settingTitle: {
     fontSize: 16,
     fontWeight: '500',
-    color: Colors.textPrimary,
   },
   settingSubtitle: {
     fontSize: 13,
-    color: Colors.textSecondary,
     marginTop: 2,
   },
   settingValue: {
@@ -330,7 +369,6 @@ const styles = StyleSheet.create({
   },
   settingValueText: {
     fontSize: 15,
-    color: Colors.textSecondary,
     marginRight: 4,
   },
   footer: {
@@ -339,7 +377,6 @@ const styles = StyleSheet.create({
   },
   footerText: {
     fontSize: 13,
-    color: Colors.textTertiary,
     textAlign: 'center',
   },
 });

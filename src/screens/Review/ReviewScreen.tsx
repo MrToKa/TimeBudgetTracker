@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -13,7 +13,7 @@ import {
 import { PieChart } from 'react-native-chart-kit';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
-import Colors from '../../constants/colors';
+import { useTheme } from '../../contexts/ThemeContext';
 import { Card } from '../../components/common';
 import { SessionWithDetails, RootStackParamList } from '../../types';
 import { getSessionsForDay, deleteSession, updateSession, getTotalMinutesByCategory } from '../../database/repositories/sessionRepository';
@@ -47,6 +47,8 @@ type ReviewRouteProp = RouteProp<RootStackParamList, 'Review'>;
 export default function ReviewScreen() {
   const navigation = useNavigation();
   const route = useRoute<ReviewRouteProp>();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   
   const [currentDate, setCurrentDate] = useState(() => {
     if (route.params?.date) {
@@ -155,8 +157,8 @@ export default function ReviewScreen() {
 
     return (
       <Card style={styles.sessionCard}>
-        <View style={styles.sessionHeader}>
-          <View style={[styles.categoryDot, { backgroundColor: item.categoryColor || Colors.gray400 }]} />
+        <View style={styles.sessionRow}>
+          <View style={[styles.colorBar, { backgroundColor: item.categoryColor || theme.gray400 }]} />
           <View style={styles.sessionInfo}>
             <Text style={styles.activityName} numberOfLines={1}>
               {item.activityNameSnapshot}
@@ -171,21 +173,21 @@ export default function ReviewScreen() {
               <Icon
                 name={item.isPlanned ? 'check-circle' : 'circle-outline'}
                 size={20}
-                color={item.isPlanned ? Colors.success : Colors.gray400}
+                color={item.isPlanned ? theme.success : theme.gray400}
               />
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.actionBtn}
               onPress={() => handleDeleteSession(item)}
             >
-              <Icon name="delete-outline" size={20} color={Colors.error} />
+              <Icon name="delete-outline" size={20} color={theme.error} />
             </TouchableOpacity>
           </View>
         </View>
 
         <View style={styles.sessionDetails}>
           <View style={styles.timeRange}>
-            <Icon name="clock-outline" size={16} color={Colors.textSecondary} />
+            <Icon name="clock-outline" size={16} color={theme.textSecondary} />
             <Text style={styles.timeText}>
               {format(startTime, 'HH:mm')} – {endTime ? format(endTime, 'HH:mm') : 'ongoing'}
             </Text>
@@ -213,7 +215,7 @@ export default function ReviewScreen() {
 
   const renderEmptyState = () => (
     <View style={styles.emptyState}>
-      <Icon name="calendar-blank" size={64} color={Colors.gray300} />
+      <Icon name="calendar-blank" size={64} color={theme.gray300} />
       <Text style={styles.emptyTitle}>No Sessions</Text>
       <Text style={styles.emptySubtitle}>
         No time tracked for this day.{'\n'}
@@ -248,7 +250,7 @@ export default function ReviewScreen() {
       {/* Date Navigation */}
       <View style={styles.dateNav}>
         <TouchableOpacity onPress={goToPreviousDay} style={styles.navButton}>
-          <Icon name="chevron-left" size={28} color={Colors.primary} />
+          <Icon name="chevron-left" size={28} color={theme.primary} />
         </TouchableOpacity>
         <TouchableOpacity onPress={goToToday} style={styles.dateLabel}>
           <Text style={styles.dateLabelText}>{getDateLabel()}</Text>
@@ -262,7 +264,7 @@ export default function ReviewScreen() {
           <Icon 
             name="chevron-right" 
             size={28} 
-            color={isToday(currentDate) ? Colors.gray300 : Colors.primary} 
+            color={isToday(currentDate) ? theme.gray300 : theme.primary} 
           />
         </TouchableOpacity>
       </View>
@@ -279,7 +281,7 @@ export default function ReviewScreen() {
               name: cat.categoryName,
               population: cat.totalMinutes,
               color: cat.color,
-              legendFontColor: Colors.textPrimary,
+              legendFontColor: theme.textPrimary,
               legendFontSize: 12,
             }))}
             width={screenWidth - 64}
@@ -303,17 +305,17 @@ export default function ReviewScreen() {
         contentContainerStyle={styles.listContent}
         ListEmptyComponent={!loading ? renderEmptyState : null}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[Colors.primary]} />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[theme.primary]} />
         }
       />
     </View>
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ReturnType<typeof useTheme>['theme']) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: theme.background,
   },
   dateNav: {
     flexDirection: 'row',
@@ -321,9 +323,9 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 8,
     paddingVertical: 12,
-    backgroundColor: Colors.white,
+    backgroundColor: theme.surface,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
+    borderBottomColor: theme.border,
   },
   navButton: {
     padding: 8,
@@ -334,11 +336,11 @@ const styles = StyleSheet.create({
   dateLabelText: {
     fontSize: 18,
     fontWeight: '600',
-    color: Colors.textPrimary,
+    color: theme.textPrimary,
   },
   dateSubtext: {
     fontSize: 13,
-    color: Colors.textSecondary,
+    color: theme.textSecondary,
     marginTop: 2,
   },
   statsRow: {
@@ -346,9 +348,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-around',
     padding: 16,
-    backgroundColor: Colors.white,
+    backgroundColor: theme.surface,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
+    borderBottomColor: theme.border,
   },
   statItem: {
     alignItems: 'center',
@@ -356,17 +358,17 @@ const styles = StyleSheet.create({
   statValue: {
     fontSize: 20,
     fontWeight: '700',
-    color: Colors.textPrimary,
+    color: theme.textPrimary,
   },
   statLabel: {
     fontSize: 12,
-    color: Colors.textSecondary,
+    color: theme.textSecondary,
     marginTop: 2,
   },
   statDivider: {
     width: 1,
     height: 32,
-    backgroundColor: Colors.border,
+    backgroundColor: theme.border,
   },
   listContent: {
     padding: 16,
@@ -374,6 +376,17 @@ const styles = StyleSheet.create({
   },
   sessionCard: {
     marginBottom: 12,
+  },
+  sessionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  colorBar: {
+    width: 4,
+    height: 48,
+    borderRadius: 2,
+    marginRight: 12,
   },
   sessionHeader: {
     flexDirection: 'row',
@@ -392,11 +405,11 @@ const styles = StyleSheet.create({
   activityName: {
     fontSize: 16,
     fontWeight: '600',
-    color: Colors.textPrimary,
+    color: theme.textPrimary,
   },
   categoryName: {
     fontSize: 13,
-    color: Colors.textSecondary,
+    color: theme.textSecondary,
     marginTop: 2,
   },
   sessionActions: {
@@ -420,10 +433,10 @@ const styles = StyleSheet.create({
   timeText: {
     marginLeft: 6,
     fontSize: 14,
-    color: Colors.textSecondary,
+    color: theme.textSecondary,
   },
   duration: {
-    backgroundColor: Colors.primary + '15',
+    backgroundColor: theme.primary + '15',
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 8,
@@ -431,7 +444,7 @@ const styles = StyleSheet.create({
   durationText: {
     fontSize: 14,
     fontWeight: '600',
-    color: Colors.primary,
+    color: theme.primary,
   },
   sessionTags: {
     flexDirection: 'row',
@@ -441,24 +454,24 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 12,
-    backgroundColor: Colors.gray100,
+    backgroundColor: theme.gray100,
   },
   tagPlanned: {
-    backgroundColor: Colors.success + '15',
+    backgroundColor: theme.success + '15',
   },
   tagUnplanned: {
-    backgroundColor: Colors.unplanned + '15',
+    backgroundColor: theme.unplanned + '15',
   },
   tagText: {
     fontSize: 12,
     fontWeight: '500',
-    color: Colors.textSecondary,
+    color: theme.textSecondary,
   },
   tagTextPlanned: {
-    color: Colors.success,
+    color: theme.success,
   },
   tagTextUnplanned: {
-    color: Colors.unplanned,
+    color: theme.unplanned,
   },
   emptyState: {
     alignItems: 'center',
@@ -468,12 +481,12 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 20,
     fontWeight: '600',
-    color: Colors.textPrimary,
+    color: theme.textPrimary,
     marginTop: 16,
   },
   emptySubtitle: {
     fontSize: 14,
-    color: Colors.textSecondary,
+    color: theme.textSecondary,
     textAlign: 'center',
     marginTop: 8,
     lineHeight: 20,
@@ -486,7 +499,7 @@ const styles = StyleSheet.create({
   chartTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: Colors.textPrimary,
+    color: theme.textPrimary,
     marginBottom: 16,
   },
 });

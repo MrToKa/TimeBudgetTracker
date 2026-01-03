@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { View, StyleSheet, ViewStyle, StyleProp } from 'react-native';
-import Colors from '../../constants/colors';
+import { useTheme } from '../../contexts/ThemeContext';
 
 interface CardProps {
   children: React.ReactNode;
@@ -17,9 +17,11 @@ export default function Card({
   variant = 'default',
   padding = 'medium',
 }: CardProps) {
+  const { theme } = useTheme();
+
   const getCardStyle = (): ViewStyle => {
     const base: ViewStyle = {
-      backgroundColor: Colors.white,
+      backgroundColor: theme.surface,
       borderRadius: 12,
     };
 
@@ -40,7 +42,7 @@ export default function Card({
     // Variant
     switch (variant) {
       case 'elevated':
-        base.shadowColor = Colors.black;
+        base.shadowColor = theme.black;
         base.shadowOffset = { width: 0, height: 2 };
         base.shadowOpacity = 0.1;
         base.shadowRadius = 8;
@@ -48,10 +50,10 @@ export default function Card({
         break;
       case 'outlined':
         base.borderWidth = 1;
-        base.borderColor = Colors.border;
+        base.borderColor = theme.border;
         break;
       default:
-        base.shadowColor = Colors.black;
+        base.shadowColor = theme.black;
         base.shadowOffset = { width: 0, height: 1 };
         base.shadowOpacity = 0.05;
         base.shadowRadius = 4;

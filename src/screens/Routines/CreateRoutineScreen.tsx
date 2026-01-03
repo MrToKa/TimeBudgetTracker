@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -11,7 +11,7 @@ import {
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import Colors from '../../constants/colors';
+import { useTheme } from '../../contexts/ThemeContext';
 import Button from '../../components/common/Button';
 import { RootStackParamList, RoutineType } from '../../types';
 import { createRoutine } from '../../database/repositories/routineRepository';
@@ -35,6 +35,8 @@ const ROUTINE_TYPES: { type: RoutineType; label: string; icon: string; descripti
 
 export default function CreateRoutineScreen() {
   const navigation = useNavigation<NavigationProp>();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const [name, setName] = useState('');
   const [routineType, setRoutineType] = useState<RoutineType>('daily');
   const [saving, setSaving] = useState(false);
@@ -110,7 +112,7 @@ export default function CreateRoutineScreen() {
               <Icon
                 name={item.icon}
                 size={28}
-                color={routineType === item.type ? Colors.white : Colors.secondary}
+                color={routineType === item.type ? theme.white : theme.secondary}
               />
             </View>
             <Text
@@ -127,7 +129,7 @@ export default function CreateRoutineScreen() {
       </View>
 
       <View style={styles.infoBox}>
-        <Icon name="lightbulb-outline" size={20} color={Colors.info} />
+        <Icon name="lightbulb-outline" size={20} color={theme.info} />
         <Text style={styles.infoText}>
           After creating the routine, you'll be able to add activities with scheduled times.
         </Text>
@@ -143,10 +145,10 @@ export default function CreateRoutineScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ReturnType<typeof useTheme>['theme']) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: theme.background,
   },
   content: {
     padding: 16,
@@ -155,31 +157,31 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: '700',
-    color: Colors.textPrimary,
+    color: theme.textPrimary,
     marginBottom: 8,
   },
   subtitle: {
     fontSize: 15,
-    color: Colors.textSecondary,
+    color: theme.textSecondary,
     marginBottom: 24,
     lineHeight: 22,
   },
   label: {
     fontSize: 14,
     fontWeight: '600',
-    color: Colors.textPrimary,
+    color: theme.textPrimary,
     marginBottom: 8,
     marginTop: 16,
   },
   input: {
-    backgroundColor: Colors.white,
+    backgroundColor: theme.inputBackground,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: theme.border,
     paddingHorizontal: 12,
     paddingVertical: 12,
     fontSize: 16,
-    color: Colors.textPrimary,
+    color: theme.textPrimary,
   },
   typeContainer: {
     flexDirection: 'row',
@@ -187,46 +189,46 @@ const styles = StyleSheet.create({
   },
   typeCard: {
     flex: 1,
-    backgroundColor: Colors.white,
+    backgroundColor: theme.surface,
     borderRadius: 12,
     borderWidth: 2,
-    borderColor: Colors.border,
+    borderColor: theme.border,
     padding: 16,
     alignItems: 'center',
   },
   typeCardSelected: {
-    borderColor: Colors.secondary,
-    backgroundColor: Colors.secondary + '08',
+    borderColor: theme.secondary,
+    backgroundColor: theme.secondary + '08',
   },
   typeIcon: {
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: Colors.secondary + '15',
+    backgroundColor: theme.secondary + '15',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 12,
   },
   typeIconSelected: {
-    backgroundColor: Colors.secondary,
+    backgroundColor: theme.secondary,
   },
   typeLabel: {
     fontSize: 16,
     fontWeight: '600',
-    color: Colors.textPrimary,
+    color: theme.textPrimary,
     marginBottom: 4,
   },
   typeLabelSelected: {
-    color: Colors.secondary,
+    color: theme.secondary,
   },
   typeDescription: {
     fontSize: 12,
-    color: Colors.textSecondary,
+    color: theme.textSecondary,
     textAlign: 'center',
   },
   infoBox: {
     flexDirection: 'row',
-    backgroundColor: Colors.info + '10',
+    backgroundColor: theme.info + '10',
     borderRadius: 8,
     padding: 12,
     marginTop: 24,
@@ -236,7 +238,7 @@ const styles = StyleSheet.create({
   infoText: {
     flex: 1,
     fontSize: 13,
-    color: Colors.textSecondary,
+    color: theme.textSecondary,
     lineHeight: 18,
   },
   saveButton: {

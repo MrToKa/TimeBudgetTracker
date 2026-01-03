@@ -1,13 +1,13 @@
 // Navigation Setup
 
 import React from 'react';
-import { NavigationContainer } from '@react-navigation/native';
+import { NavigationContainer, DefaultTheme, DarkTheme } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
 import { RootStackParamList, MainTabParamList } from '../types';
-import Colors from '../constants/colors';
+import { useTheme } from '../contexts/ThemeContext';
 
 // Screens
 import HomeScreen from '../screens/Home/HomeScreen';
@@ -34,6 +34,8 @@ const Tab = createBottomTabNavigator<MainTabParamList>();
 
 // Tab Navigator
 function MainTabs() {
+  const { theme } = useTheme();
+
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
@@ -57,11 +59,11 @@ function MainTabs() {
 
           return <Icon name={iconName} size={size} color={color} />;
         },
-        tabBarActiveTintColor: Colors.primary,
-        tabBarInactiveTintColor: Colors.gray400,
+        tabBarActiveTintColor: theme.tabBarActive,
+        tabBarInactiveTintColor: theme.tabBarInactive,
         tabBarStyle: {
-          backgroundColor: Colors.white,
-          borderTopColor: Colors.border,
+          backgroundColor: theme.tabBarBackground,
+          borderTopColor: theme.tabBarBorder,
           paddingBottom: 4,
           paddingTop: 4,
           height: 60,
@@ -71,9 +73,9 @@ function MainTabs() {
           fontWeight: '500',
         },
         headerStyle: {
-          backgroundColor: Colors.primary,
+          backgroundColor: theme.primary,
         },
-        headerTintColor: Colors.white,
+        headerTintColor: theme.white,
         headerTitleStyle: {
           fontWeight: '600',
         },
@@ -110,21 +112,54 @@ function MainTabs() {
 
 // Root Stack Navigator
 export default function AppNavigator() {
+  const { theme, isDark } = useTheme();
+
+  const navigationTheme = {
+    dark: isDark,
+    colors: {
+      primary: theme.primary,
+      background: theme.background,
+      card: theme.surface,
+      text: theme.textPrimary,
+      border: theme.border,
+      notification: theme.error,
+    },
+    fonts: {
+      regular: {
+        fontFamily: 'System',
+        fontWeight: '400' as const,
+      },
+      medium: {
+        fontFamily: 'System',
+        fontWeight: '500' as const,
+      },
+      bold: {
+        fontFamily: 'System',
+        fontWeight: '700' as const,
+      },
+      heavy: {
+        fontFamily: 'System',
+        fontWeight: '800' as const,
+      },
+    },
+  };
+
   return (
-    <NavigationContainer>
+    <NavigationContainer theme={navigationTheme}>
       <Stack.Navigator
         screenOptions={{
           headerStyle: {
-            backgroundColor: Colors.primary,
+            backgroundColor: theme.primary,
           },
-          headerTintColor: Colors.white,
+          headerTintColor: theme.white,
           headerTitleStyle: {
             fontWeight: '600',
           },
           headerBackTitleVisible: false,
           headerBackImage: () => (
-            <Icon name="arrow-left" size={24} color={Colors.white} style={{ marginLeft: 10 }} />
+            <Icon name="arrow-left" size={24} color={theme.white} style={{ marginLeft: 10 }} />
           ),
+          cardStyle: { backgroundColor: theme.background },
         }}
       >
         <Stack.Screen 

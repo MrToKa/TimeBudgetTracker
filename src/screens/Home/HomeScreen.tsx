@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { View, Text, ScrollView, StyleSheet, ActivityIndicator, TouchableOpacity, Alert } from 'react-native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { useNavigation } from '@react-navigation/native';
@@ -8,7 +8,7 @@ import { useActivityStore } from '../../store/activityStore';
 import { useTimerStore } from '../../store/timerStore';
 import { useRoutineExecutionStore } from '../../store/routineExecutionStore';
 import { RootStackParamList } from '../../types';
-import Colors from '../../constants/colors';
+import { useTheme } from '../../contexts/ThemeContext';
 import Button from '../../components/common/Button';
 import TimerCard from '../../components/timer/TimerCard';
 import ActivityCard from '../../components/activity/ActivityCard';
@@ -16,6 +16,7 @@ import { Card } from '../../components/common';
 
 export default function HomeScreen() {
   const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
+  const { theme } = useTheme();
   const { favorites, loadFavorites, loadActivities, loadCategories } = useActivityStore();
   const { runningTimers, loadRunningTimers, stopTimer, startTimer } = useTimerStore();
   const { 
@@ -29,6 +30,8 @@ export default function HomeScreen() {
   } = useRoutineExecutionStore();
   const [loading, setLoading] = useState(true);
   const [currentTime, setCurrentTime] = useState(Date.now());
+
+  const styles = useMemo(() => createStyles(theme), [theme]);
 
   useEffect(() => {
     const load = async () => {
@@ -110,20 +113,20 @@ export default function HomeScreen() {
           <Button
             title="Start Timer"
             onPress={() => navigation.navigate('ManualAdd', {})}
-            icon={<Icon name="plus" size={18} color={Colors.white} style={styles.buttonIcon} />}
+            icon={<Icon name="plus" size={18} color={theme.white} style={styles.buttonIcon} />}
           />
           <Button
             title="Stop all"
             variant="outline"
             onPress={loadRunningTimers}
             style={{ marginLeft: 8 }}
-            icon={<Icon name="stop" size={18} color={Colors.primary} style={styles.buttonIcon} />}
+            icon={<Icon name="stop" size={18} color={theme.primary} style={styles.buttonIcon} />}
           />
         </View>
       </View>
 
       {loading ? (
-        <ActivityIndicator size="large" color={Colors.primary} />
+        <ActivityIndicator size="large" color={theme.primary} />
       ) : (
         <>
           {runningRoutine && (
@@ -140,12 +143,12 @@ export default function HomeScreen() {
                     </Text>
                   </View>
                   <TouchableOpacity onPress={handleStopRoutine} style={styles.stopRoutineButton}>
-                    <Icon name="close" size={24} color={Colors.error} />
+                    <Icon name="close" size={24} color={theme.error} />
                   </TouchableOpacity>
                 </View>
 
                 <View style={styles.currentActivity}>
-                  <View style={styles.categoryBadge} style={{ backgroundColor: runningRoutine.activities[runningRoutine.currentActivityIndex].categoryColor + '20' }}>
+                  <View style={[styles.categoryBadge, { backgroundColor: runningRoutine.activities[runningRoutine.currentActivityIndex].categoryColor + '20' }]}>
                     <View
                       style={[
                         styles.categoryDot,
@@ -188,7 +191,7 @@ export default function HomeScreen() {
                       <Icon
                         name={runningRoutine.isPaused ? 'play' : 'pause'}
                         size={24}
-                        color={Colors.primary}
+                        color={theme.primary}
                       />
                       <Text style={styles.controlButtonText}>
                         {runningRoutine.isPaused ? 'Resume' : 'Pause'}
@@ -200,7 +203,7 @@ export default function HomeScreen() {
                       onPress={handleNextActivity}
                       disabled={runningRoutine.currentActivityIndex === runningRoutine.activities.length - 1}
                     >
-                      <Icon name="skip-next" size={24} color={Colors.white} />
+                      <Icon name="skip-next" size={24} color={theme.white} />
                       <Text style={[styles.controlButtonText, styles.nextButtonText]}>
                         {runningRoutine.currentActivityIndex === runningRoutine.activities.length - 1
                           ? 'Last Activity'
@@ -226,7 +229,7 @@ export default function HomeScreen() {
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>Running timers</Text>
               <TouchableOpacity onPress={loadRunningTimers}>
-                <Icon name="refresh" size={22} color={Colors.primary} />
+                <Icon name="refresh" size={22} color={theme.primary} />
               </TouchableOpacity>
             </View>
             {runningTimers.length === 0 ? (
@@ -267,10 +270,10 @@ export default function HomeScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ReturnType<typeof useTheme>['theme']) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: theme.background,
   },
   content: {
     paddingBottom: 24,
@@ -283,11 +286,11 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: '700',
-    color: Colors.textPrimary,
+    color: theme.textPrimary,
   },
   subtitle: {
     fontSize: 14,
-    color: Colors.textSecondary,
+    color: theme.textSecondary,
     marginTop: 4,
   },
   actionsRow: {
@@ -307,12 +310,12 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: Colors.textPrimary,
+    color: theme.textPrimary,
   },
   emptyText: {
     paddingHorizontal: 16,
     paddingVertical: 12,
-    color: Colors.textSecondary,
+    color: theme.textSecondary,
   },
   favoriteButton: {
     marginTop: 8,
@@ -339,12 +342,12 @@ const styles = StyleSheet.create({
   routineName: {
     fontSize: 20,
     fontWeight: '700',
-    color: Colors.textPrimary,
+    color: theme.textPrimary,
     marginBottom: 4,
   },
   routineProgress: {
     fontSize: 14,
-    color: Colors.textSecondary,
+    color: theme.textSecondary,
   },
   stopRoutineButton: {
     padding: 4,
@@ -370,12 +373,12 @@ const styles = StyleSheet.create({
   categoryText: {
     fontSize: 12,
     fontWeight: '600',
-    color: Colors.textPrimary,
+    color: theme.textPrimary,
   },
   activityName: {
     fontSize: 18,
     fontWeight: '600',
-    color: Colors.textPrimary,
+    color: theme.textPrimary,
     marginBottom: 16,
   },
   timers: {
@@ -385,23 +388,23 @@ const styles = StyleSheet.create({
   },
   timerItem: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: theme.surface,
     borderRadius: 8,
     padding: 12,
   },
   timerLabel: {
     fontSize: 12,
-    color: Colors.textSecondary,
+    color: theme.textSecondary,
     marginBottom: 4,
   },
   timerValue: {
     fontSize: 24,
     fontWeight: '700',
-    color: Colors.primary,
+    color: theme.primary,
   },
   expectedTime: {
     fontSize: 12,
-    color: Colors.textSecondary,
+    color: theme.textSecondary,
     marginTop: 2,
   },
   routineControls: {
@@ -415,37 +418,37 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    backgroundColor: Colors.white,
+    backgroundColor: theme.cardBackground,
     borderRadius: 8,
     borderWidth: 2,
-    borderColor: Colors.primary,
+    borderColor: theme.primary,
     padding: 12,
   },
   controlButtonText: {
     fontSize: 14,
     fontWeight: '600',
-    color: Colors.primary,
+    color: theme.primary,
   },
   nextButton: {
-    backgroundColor: Colors.primary,
-    borderColor: Colors.primary,
+    backgroundColor: theme.primary,
+    borderColor: theme.primary,
   },
   nextButtonText: {
-    color: Colors.white,
+    color: theme.white,
   },
   upNext: {
-    backgroundColor: Colors.background,
+    backgroundColor: theme.surface,
     borderRadius: 8,
     padding: 12,
   },
   upNextLabel: {
     fontSize: 12,
-    color: Colors.textSecondary,
+    color: theme.textSecondary,
     marginBottom: 4,
   },
   upNextActivity: {
     fontSize: 14,
     fontWeight: '600',
-    color: Colors.textPrimary,
+    color: theme.textPrimary,
   },
 });

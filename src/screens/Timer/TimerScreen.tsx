@@ -1,14 +1,16 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { View, Text, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
 import { useTimerStore } from '../../store/timerStore';
-import Colors from '../../constants/colors';
+import { useTheme } from '../../contexts/ThemeContext';
 import Button from '../../components/common/Button';
 import TimerCard from '../../components/timer/TimerCard';
 
 export default function TimerScreen() {
   const { runningTimers, loadRunningTimers, stopTimer, stopAllTimers } = useTimerStore();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const [loading, setLoading] = useState(true);
   const [stopAllLoading, setStopAllLoading] = useState(false);
 
@@ -36,7 +38,7 @@ export default function TimerScreen() {
             title="Refresh"
             variant="outline"
             onPress={loadRunningTimers}
-            icon={<Icon name="refresh" size={18} color={Colors.primary} style={styles.actionIcon} />}
+            icon={<Icon name="refresh" size={18} color={theme.primary} style={styles.actionIcon} />}
           />
           <Button
             title="Stop all"
@@ -44,13 +46,13 @@ export default function TimerScreen() {
             style={{ marginLeft: 8 }}
             onPress={handleStopAll}
             loading={stopAllLoading}
-            icon={<Icon name="stop" size={18} color={Colors.white} style={styles.actionIcon} />}
+            icon={<Icon name="stop" size={18} color={theme.white} style={styles.actionIcon} />}
           />
         </View>
       </View>
 
       {loading ? (
-        <ActivityIndicator size="large" color={Colors.primary} />
+        <ActivityIndicator size="large" color={theme.primary} />
       ) : runningTimers.length === 0 ? (
         <Text style={styles.emptyText}>No active timers. Start one from Activities or Home.</Text>
       ) : (
@@ -66,10 +68,10 @@ export default function TimerScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ReturnType<typeof useTheme>['theme']) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: theme.background,
   },
   content: {
     paddingBottom: 24,
@@ -82,11 +84,11 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: '700',
-    color: Colors.textPrimary,
+    color: theme.textPrimary,
   },
   subtitle: {
     fontSize: 14,
-    color: Colors.textSecondary,
+    color: theme.textSecondary,
     marginTop: 4,
   },
   actions: {
@@ -96,7 +98,7 @@ const styles = StyleSheet.create({
   emptyText: {
     paddingHorizontal: 16,
     paddingVertical: 12,
-    color: Colors.textSecondary,
+    color: theme.textSecondary,
   },
   actionIcon: {
     marginRight: 8,

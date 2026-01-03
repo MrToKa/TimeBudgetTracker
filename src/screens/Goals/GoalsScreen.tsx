@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -11,7 +11,7 @@ import {
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import Colors from '../../constants/colors';
+import { useTheme } from '../../contexts/ThemeContext';
 import { Card, Button } from '../../components/common';
 import { GoalWithActivity, GoalScope, GoalType } from '../../types';
 import {
@@ -43,6 +43,8 @@ const SCOPE_ICONS: Record<GoalScope, string> = {
 
 export default function GoalsScreen() {
   const navigation = useNavigation<NavigationProp>();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const [goals, setGoals] = useState<GoalWithActivity[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -122,20 +124,20 @@ export default function GoalsScreen() {
               <Icon
                 name={item.isActive ? 'pause-circle' : 'play-circle'}
                 size={24}
-                color={item.isActive ? Colors.warning : Colors.success}
+                color={item.isActive ? theme.warning : theme.success}
               />
             </TouchableOpacity>
             <TouchableOpacity
               onPress={() => navigation.navigate('EditGoal', { goalId: item.id })}
               style={styles.actionButton}
             >
-              <Icon name="pencil" size={20} color={Colors.textSecondary} />
+              <Icon name="pencil" size={20} color={theme.textSecondary} />
             </TouchableOpacity>
             <TouchableOpacity
               onPress={() => handleDeleteGoal(item)}
               style={styles.actionButton}
             >
-              <Icon name="delete" size={20} color={Colors.error} />
+              <Icon name="delete" size={20} color={theme.error} />
             </TouchableOpacity>
           </View>
         </View>
@@ -145,7 +147,7 @@ export default function GoalsScreen() {
             <Icon
               name={isMinGoal ? 'arrow-up-bold-circle' : 'arrow-down-bold-circle'}
               size={20}
-              color={isMinGoal ? Colors.success : Colors.error}
+              color={isMinGoal ? theme.success : theme.error}
             />
             <Text style={[styles.goalTypeText, isMinGoal ? styles.goalTypeMin : styles.goalTypeMax]}>
               {isMinGoal ? 'Minimum' : 'Maximum'}
@@ -153,12 +155,12 @@ export default function GoalsScreen() {
           </View>
           
           <View style={styles.goalScope}>
-            <Icon name={SCOPE_ICONS[item.scope]} size={18} color={Colors.textSecondary} />
+            <Icon name={SCOPE_ICONS[item.scope]} size={18} color={theme.textSecondary} />
             <Text style={styles.goalScopeText}>{SCOPE_LABELS[item.scope]}</Text>
           </View>
           
           <View style={styles.goalTarget}>
-            <Icon name="target" size={18} color={Colors.primary} />
+            <Icon name="target" size={18} color={theme.primary} />
             <Text style={styles.goalTargetText}>{formatDuration(item.targetMinutes)}</Text>
           </View>
         </View>
@@ -168,7 +170,7 @@ export default function GoalsScreen() {
 
   const renderEmptyState = () => (
     <View style={styles.emptyState}>
-      <Icon name="flag-checkered" size={64} color={Colors.gray300} />
+      <Icon name="flag-checkered" size={64} color={theme.gray300} />
       <Text style={styles.emptyTitle}>No Goals Yet</Text>
       <Text style={styles.emptySubtitle}>
         Create goals to track minimum or maximum time{'\n'}you want to spend on activities
@@ -192,7 +194,7 @@ export default function GoalsScreen() {
           <Icon
             name={showInactive ? 'eye' : 'eye-off'}
             size={20}
-            color={Colors.textSecondary}
+            color={theme.textSecondary}
           />
           <Text style={styles.filterText}>
             {showInactive ? 'Showing all' : 'Active only'}
@@ -207,7 +209,7 @@ export default function GoalsScreen() {
         contentContainerStyle={styles.listContent}
         ListEmptyComponent={!loading ? renderEmptyState : null}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[Colors.primary]} />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[theme.primary]} />
         }
       />
 
@@ -215,16 +217,16 @@ export default function GoalsScreen() {
         style={styles.fab}
         onPress={() => navigation.navigate('CreateGoal')}
       >
-        <Icon name="plus" size={28} color={Colors.white} />
+        <Icon name="plus" size={28} color={theme.white} />
       </TouchableOpacity>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ReturnType<typeof useTheme>['theme']) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: theme.background,
   },
   header: {
     flexDirection: 'row',
@@ -236,7 +238,7 @@ const styles = StyleSheet.create({
   screenTitle: {
     fontSize: 28,
     fontWeight: '700',
-    color: Colors.textPrimary,
+    color: theme.textPrimary,
   },
   filterButton: {
     flexDirection: 'row',
@@ -246,7 +248,7 @@ const styles = StyleSheet.create({
   filterText: {
     marginLeft: 6,
     fontSize: 14,
-    color: Colors.textSecondary,
+    color: theme.textSecondary,
   },
   listContent: {
     padding: 16,
@@ -271,11 +273,11 @@ const styles = StyleSheet.create({
   activityName: {
     fontSize: 17,
     fontWeight: '600',
-    color: Colors.textPrimary,
+    color: theme.textPrimary,
   },
   categoryName: {
     fontSize: 13,
-    color: Colors.textSecondary,
+    color: theme.textSecondary,
     marginTop: 2,
   },
   goalActions: {
@@ -302,10 +304,10 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   goalTypeMin: {
-    color: Colors.success,
+    color: theme.success,
   },
   goalTypeMax: {
-    color: Colors.error,
+    color: theme.error,
   },
   goalScope: {
     flexDirection: 'row',
@@ -314,7 +316,7 @@ const styles = StyleSheet.create({
   goalScopeText: {
     marginLeft: 6,
     fontSize: 14,
-    color: Colors.textSecondary,
+    color: theme.textSecondary,
   },
   goalTarget: {
     flexDirection: 'row',
@@ -324,7 +326,7 @@ const styles = StyleSheet.create({
     marginLeft: 6,
     fontSize: 14,
     fontWeight: '600',
-    color: Colors.primary,
+    color: theme.primary,
   },
   emptyState: {
     flex: 1,
@@ -335,12 +337,12 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 20,
     fontWeight: '600',
-    color: Colors.textPrimary,
+    color: theme.textPrimary,
     marginTop: 16,
   },
   emptySubtitle: {
     fontSize: 14,
-    color: Colors.textSecondary,
+    color: theme.textSecondary,
     textAlign: 'center',
     marginTop: 8,
     lineHeight: 20,
@@ -356,7 +358,7 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: Colors.primary,
+    backgroundColor: theme.primary,
     justifyContent: 'center',
     alignItems: 'center',
     elevation: 4,

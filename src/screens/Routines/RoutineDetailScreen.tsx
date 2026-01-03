@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -12,7 +12,7 @@ import {
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useNavigation, useRoute, RouteProp, useFocusEffect } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import Colors from '../../constants/colors';
+import { useTheme } from '../../contexts/ThemeContext';
 import Button from '../../components/common/Button';
 import { Card } from '../../components/common';
 import { RootStackParamList, RoutineType } from '../../types';
@@ -35,6 +35,8 @@ export default function RoutineDetailScreen() {
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<RoutineDetailRouteProp>();
   const { routineId } = route.params;
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
 
   const { startRoutine } = useRoutineExecutionStore();
 
@@ -141,7 +143,7 @@ export default function RoutineDetailScreen() {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={Colors.primary} />
+        <ActivityIndicator size="large" color={theme.primary} />
       </View>
     );
   }
@@ -172,7 +174,7 @@ export default function RoutineDetailScreen() {
             <Icon
               name={item.icon}
               size={24}
-              color={routineType === item.type ? Colors.secondary : Colors.textSecondary}
+              color={routineType === item.type ? theme.secondary : theme.textSecondary}
             />
             <Text
               style={[
@@ -192,13 +194,13 @@ export default function RoutineDetailScreen() {
           style={styles.addButton}
           onPress={() => navigation.navigate('AddRoutineActivity', { routineId })}
         >
-          <Icon name="plus" size={20} color={Colors.white} />
+          <Icon name="plus" size={20} color={theme.white} />
         </TouchableOpacity>
       </View>
 
       {items.length === 0 ? (
         <Card style={styles.emptyCard}>
-          <Icon name="clipboard-text-outline" size={48} color={Colors.gray300} />
+          <Icon name="clipboard-text-outline" size={48} color={theme.gray300} />
           <Text style={styles.emptyText}>No activities in this routine yet</Text>
         </Card>
       ) : (
@@ -209,7 +211,7 @@ export default function RoutineDetailScreen() {
                 <Text style={styles.itemName}>{item.activity.name}</Text>
                 {item.scheduledTime && (
                   <View style={styles.timeRow}>
-                    <Icon name="clock-outline" size={14} color={Colors.textSecondary} />
+                    <Icon name="clock-outline" size={14} color={theme.textSecondary} />
                     <Text style={styles.itemTime}>{item.scheduledTime}</Text>
                   </View>
                 )}
@@ -223,7 +225,7 @@ export default function RoutineDetailScreen() {
                 onPress={() => handleDeleteItem(item.id, item.activity.name)}
                 style={styles.deleteButton}
               >
-                <Icon name="close" size={20} color={Colors.error} />
+                <Icon name="close" size={20} color={theme.error} />
               </TouchableOpacity>
             </View>
           </Card>
@@ -247,10 +249,10 @@ export default function RoutineDetailScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ReturnType<typeof useTheme>['theme']) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: theme.background,
   },
   content: {
     padding: 16,
@@ -260,30 +262,30 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: Colors.background,
+    backgroundColor: theme.background,
   },
   title: {
     fontSize: 24,
     fontWeight: '700',
-    color: Colors.textPrimary,
+    color: theme.textPrimary,
     marginBottom: 24,
   },
   label: {
     fontSize: 14,
     fontWeight: '600',
-    color: Colors.textPrimary,
+    color: theme.textPrimary,
     marginBottom: 8,
     marginTop: 16,
   },
   input: {
-    backgroundColor: Colors.white,
+    backgroundColor: theme.inputBackground,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: theme.border,
     paddingHorizontal: 12,
     paddingVertical: 12,
     fontSize: 16,
-    color: Colors.textPrimary,
+    color: theme.textPrimary,
   },
   typeContainer: {
     flexDirection: 'row',
@@ -295,23 +297,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    backgroundColor: Colors.white,
+    backgroundColor: theme.surface,
     borderRadius: 8,
     borderWidth: 2,
-    borderColor: Colors.border,
+    borderColor: theme.border,
     padding: 12,
   },
   typeCardSelected: {
-    borderColor: Colors.secondary,
-    backgroundColor: Colors.secondary + '08',
+    borderColor: theme.secondary,
+    backgroundColor: theme.secondary + '08',
   },
   typeLabel: {
     fontSize: 14,
     fontWeight: '600',
-    color: Colors.textPrimary,
+    color: theme.textPrimary,
   },
   typeLabelSelected: {
-    color: Colors.secondary,
+    color: theme.secondary,
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -323,10 +325,10 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: Colors.textPrimary,
+    color: theme.textPrimary,
   },
   addButton: {
-    backgroundColor: Colors.secondary,
+    backgroundColor: theme.secondary,
     width: 32,
     height: 32,
     borderRadius: 16,
@@ -339,7 +341,7 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 14,
-    color: Colors.textSecondary,
+    color: theme.textSecondary,
     marginTop: 12,
   },
   itemCard: {
@@ -356,7 +358,7 @@ const styles = StyleSheet.create({
   itemName: {
     fontSize: 16,
     fontWeight: '600',
-    color: Colors.textPrimary,
+    color: theme.textPrimary,
     marginBottom: 4,
   },
   timeRow: {
@@ -367,11 +369,11 @@ const styles = StyleSheet.create({
   },
   itemTime: {
     fontSize: 13,
-    color: Colors.textSecondary,
+    color: theme.textSecondary,
   },
   itemDuration: {
     fontSize: 13,
-    color: Colors.textSecondary,
+    color: theme.textSecondary,
     marginTop: 2,
   },
   deleteButton: {
@@ -379,7 +381,7 @@ const styles = StyleSheet.create({
   },
   startButton: {
     marginTop: 24,
-    backgroundColor: Colors.primary,
+    backgroundColor: theme.primary,
   },
   saveButton: {
     marginTop: 12,
