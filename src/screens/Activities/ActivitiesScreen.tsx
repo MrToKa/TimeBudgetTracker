@@ -28,7 +28,7 @@ export default function ActivitiesScreen() {
       setLoading(false);
     };
     load();
-  }, [loadActivities, loadCategories]);
+  }, []);
 
   const handleStart = async (id: string) => {
     const activity = activities.find(a => a.id === id);
@@ -41,9 +41,34 @@ export default function ActivitiesScreen() {
     }
   };
 
-  const filtered = selectedCategory
-    ? activities.filter(a => a.categoryId === selectedCategory && !a.isArchived)
-    : activities.filter(a => !a.isArchived);
+  // Define category sort order
+  const categoryOrder: Record<string, number> = {
+    'Daily Basics': 1,
+    'Education': 2,
+    'Health': 3,
+    'Entertainment': 4,
+    'Hobbies': 5,
+    'Time Wasting': 6,
+  };
+
+  const filtered = useMemo(() => {
+    const filteredActivities = selectedCategory
+      ? activities.filter(a => a.categoryId === selectedCategory && !a.isArchived)
+      : activities.filter(a => !a.isArchived);
+
+    // Sort by category type first, then alphabetically by name
+    return filteredActivities.sort((a, b) => {
+      const orderA = categoryOrder[a.categoryName] ?? 999;
+      const orderB = categoryOrder[b.categoryName] ?? 999;
+      
+      if (orderA !== orderB) {
+        return orderA - orderB;
+      }
+      
+      // Within same category, sort alphabetically
+      return a.name.localeCompare(b.name);
+    });
+  }, [activities, selectedCategory]);
 
   const onRefresh = async () => {
     setRefreshing(true);

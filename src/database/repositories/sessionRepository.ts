@@ -346,22 +346,25 @@ export async function getTotalMinutesByActivity(
   const start = typeof startDate === 'string' ? startDate : startDate.toISOString();
   const end = typeof endDate === 'string' ? endDate : endDate.toISOString();
   
+  // Use activity_name_snapshot to include deleted activities in the stats
+  // Group by both activity_id and activity_name_snapshot to handle cases where
+  // activity_id might be null or when the same name is reused
   const rows = await executeQuery<{
-    activity_id: string;
+    activity_id: string | null;
     activity_name_snapshot: string;
     total_minutes: number;
     sessions_count: number;
   }>(
     `SELECT activity_id, activity_name_snapshot, SUM(actual_duration_minutes) as total_minutes, COUNT(*) as sessions_count
      FROM time_sessions
-     WHERE start_time >= ? AND start_time <= ? AND is_running = 0
-     GROUP BY activity_id, activity_name_snapshot
+     WHERE start_time >= ? AND start_time <= ? AND is_running = 0 AND activity_name_snapshot IS NOT NULL
+     GROUP BY COALESCE(activity_id, activity_name_snapshot), activity_name_snapshot
      ORDER BY total_minutes DESC`,
     [start, end]
   );
   
   return rows.map(row => ({
-    activityId: row.activity_id,
+    activityId: row.activity_id ?? '',
     activityName: row.activity_name_snapshot,
     totalMinutes: row.total_minutes ?? 0,
     sessionsCount: row.sessions_count,

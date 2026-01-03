@@ -11,13 +11,14 @@ import CategoryPicker from '../../components/activity/CategoryPicker';
 export default function ActivityDetailScreen() {
   const navigation = useNavigation();
   const route = useRoute<RouteProp<RootStackParamList, 'ActivityDetail'>>();
-  const { getActivityById, activities, loadActivities, updateActivity, categories, loadCategories } = useActivityStore();
+  const { getActivityById, activities, loadActivities, updateActivity, deleteActivity, categories, loadCategories } = useActivityStore();
   const { theme } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
   
   const [activity, setActivity] = useState<ActivityWithCategory | undefined>();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   
   // Editable fields
   const [name, setName] = useState('');
@@ -32,7 +33,7 @@ export default function ActivityDetailScreen() {
       setLoading(false);
     };
     load();
-  }, [loadActivities, loadCategories]);
+  }, []);
 
   useEffect(() => {
     const act = getActivityById(route.params.activityId);
@@ -45,7 +46,7 @@ export default function ActivityDetailScreen() {
       const cat = categories.find(c => c.id === act.categoryId);
       setSelectedCategory(cat || null);
     }
-  }, [activities, categories, getActivityById, route.params.activityId]);
+  }, [activities, categories, route.params.activityId]);
 
   const handleSave = async () => {
     if (!activity) return;
@@ -76,6 +77,36 @@ export default function ActivityDetailScreen() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleDelete = () => {
+    if (!activity) return;
+    Alert.alert(
+      'Delete activity',
+      'This will permanently remove the activity. Continue?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            setDeleting(true);
+            try {
+              await deleteActivity(activity.id);
+              if (navigation.canGoBack()) {
+                navigation.goBack();
+              } else {
+                navigation.navigate('MainTabs', { screen: 'Activities' });
+              }
+            } catch (error) {
+              Alert.alert('Delete failed', (error as Error).message);
+            } finally {
+              setDeleting(false);
+            }
+          },
+        },
+      ]
+    );
   };
 
   if (loading) {
@@ -137,7 +168,14 @@ export default function ActivityDetailScreen() {
         <Button
           title={saving ? 'Saving...' : 'Save Changes'}
           onPress={handleSave}
-          disabled={saving}
+          disabled={saving || deleting}
+        />
+        <Button
+          title={deleting ? 'Deleting...' : 'Delete'}
+          onPress={handleDelete}
+          variant="danger"
+          disabled={deleting || saving}
+          style={styles.deleteButton}
         />
       </View>
     </ScrollView>
@@ -205,5 +243,9 @@ const createStyles = (theme: ReturnType<typeof useTheme>['theme']) => StyleSheet
   },
   buttonContainer: {
     marginTop: 24,
+    gap: 12,
+  },
+  deleteButton: {
+    marginTop: 8,
   },
 });

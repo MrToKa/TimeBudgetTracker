@@ -11,7 +11,7 @@ import CategoryPicker from '../../components/activity/CategoryPicker';
 export default function EditActivityScreen() {
   const navigation = useNavigation();
   const route = useRoute<RouteProp<RootStackParamList, 'EditActivity'>>();
-  const { activities, loadActivities, createActivity, updateActivity, categories, loadCategories } = useActivityStore();
+  const { activities, loadActivities, createActivity, updateActivity, deleteActivity, categories, loadCategories } = useActivityStore();
   const { theme } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
 
@@ -21,6 +21,7 @@ export default function EditActivityScreen() {
   const [isPlannedDefault, setIsPlannedDefault] = useState(true);
   const [idlePromptEnabled, setIdlePromptEnabled] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     const load = async () => {
@@ -40,7 +41,7 @@ export default function EditActivityScreen() {
       }
     };
     load();
-  }, [activities, categories, loadActivities, loadCategories, route.params]);
+  }, [route.params]);
 
   const handleSave = async () => {
     if (!name || !category) {
@@ -76,6 +77,37 @@ export default function EditActivityScreen() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const confirmDelete = () => {
+    if (!route.params?.activityId) return;
+
+    Alert.alert(
+      'Delete activity',
+      'This will permanently remove the activity. Continue?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            setDeleting(true);
+            try {
+              await deleteActivity(route.params.activityId as string);
+              if (navigation.canGoBack()) {
+                navigation.goBack();
+              } else {
+                navigation.navigate('MainTabs', { screen: 'Activities' });
+              }
+            } catch (error) {
+              Alert.alert('Delete failed', (error as Error).message);
+            } finally {
+              setDeleting(false);
+            }
+          },
+        },
+      ]
+    );
   };
 
   return (
@@ -117,7 +149,16 @@ export default function EditActivityScreen() {
         <Switch value={idlePromptEnabled} onValueChange={setIdlePromptEnabled} />
       </View>
 
-      <Button title={saving ? 'Saving...' : 'Save'} onPress={handleSave} disabled={saving} />
+      <Button title={saving ? 'Saving...' : 'Save'} onPress={handleSave} disabled={saving || deleting} />
+      {route.params?.activityId ? (
+        <Button
+          title={deleting ? 'Deleting...' : 'Delete'}
+          onPress={confirmDelete}
+          variant="danger"
+          disabled={deleting || saving}
+          style={styles.deleteButton}
+        />
+      ) : null}
     </View>
   );
 }
@@ -156,5 +197,8 @@ const createStyles = (theme: ReturnType<typeof useTheme>['theme']) => StyleSheet
     alignItems: 'center',
     justifyContent: 'space-between',
     marginVertical: 10,
+  },
+  deleteButton: {
+    marginTop: 12,
   },
 });

@@ -23,6 +23,7 @@ interface ActivityState {
   archiveActivity: (id: string) => Promise<boolean>;
   unarchiveActivity: (id: string) => Promise<boolean>;
   toggleFavorite: (id: string) => Promise<boolean>;
+  deleteActivity: (id: string) => Promise<boolean>;
   searchActivities: (query: string) => Promise<ActivityWithCategory[]>;
   getSmartOrderedActivities: () => Promise<ActivityWithCategory[]>;
   clearError: () => void;
@@ -146,6 +147,23 @@ export const useActivityStore = create<ActivityState>((set, get) => ({
       await get().loadFavorites();
       
       return isFavorite;
+    } catch (error) {
+      set({ error: (error as Error).message });
+      throw error;
+    }
+  },
+
+  deleteActivity: async (id) => {
+    set({ error: null });
+    try {
+      const deleted = await activityRepository.deleteActivity(id);
+
+      if (deleted) {
+        await get().loadActivities();
+        await get().loadFavorites();
+      }
+
+      return deleted;
     } catch (error) {
       set({ error: (error as Error).message });
       throw error;
