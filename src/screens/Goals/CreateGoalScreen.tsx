@@ -10,6 +10,7 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -40,6 +41,7 @@ const GOAL_SCOPES: { value: GoalScope; label: string; icon: string }[] = [
 export default function CreateGoalScreen() {
   const navigation = useNavigation<NavigationProp>();
   const { theme } = useTheme();
+  const insets = useSafeAreaInsets();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const GOAL_TYPES = useMemo(() => getGoalTypes(theme), [theme]);
   const [activities, setActivities] = useState<ActivityWithCategory[]>([]);
@@ -148,7 +150,7 @@ export default function CreateGoalScreen() {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
+      <ScrollView style={styles.scrollView} contentContainerStyle={[styles.content, { paddingBottom: Math.max(insets.bottom, 16) + 16 }]}>
         <Text style={styles.screenTitle}>Create Goal</Text>
 
         {/* Activity Selection */}

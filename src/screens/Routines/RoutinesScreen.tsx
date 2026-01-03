@@ -8,6 +8,7 @@ import {
   Alert,
   RefreshControl,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -31,7 +32,8 @@ const ROUTINE_TYPE_LABELS: Record<RoutineType, string> = {
 export default function RoutinesScreen() {
   const navigation = useNavigation<NavigationProp>();
   const { theme } = useTheme();
-  const styles = useMemo(() => createStyles(theme), [theme]);
+  const insets = useSafeAreaInsets();
+  const styles = useMemo(() => createStyles(theme, insets.bottom), [theme, insets.bottom]);
   const [routines, setRoutines] = useState<Routine[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -186,7 +188,7 @@ export default function RoutinesScreen() {
   );
 }
 
-const createStyles = (theme: ReturnType<typeof useTheme>['theme']) => StyleSheet.create({
+const createStyles = (theme: ReturnType<typeof useTheme>['theme'], bottomInset: number = 0) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.background,
@@ -292,7 +294,7 @@ const createStyles = (theme: ReturnType<typeof useTheme>['theme']) => StyleSheet
   fab: {
     position: 'absolute',
     right: 20,
-    bottom: 20,
+    bottom: Math.max(bottomInset, 20) + 20,
     width: 56,
     height: 56,
     borderRadius: 28,
