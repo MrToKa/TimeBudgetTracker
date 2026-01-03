@@ -47,10 +47,6 @@ export default function ActivityCard({
           <Text style={[styles.name, compact && styles.nameCompact]} numberOfLines={1}>
             {activity.name}
           </Text>
-          
-          {activity.isFavorite && (
-            <Icon name="heart" size={16} color={theme.error} style={styles.favoriteIcon} />
-          )}
         </View>
         
         {!compact && (
