@@ -49,7 +49,9 @@ export default function CreateRoutineScreen() {
       return;
     }
 
-    if (!/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/.test(startTime)) {
+    const trimmedStartTime = startTime.trim();
+
+    if (trimmedStartTime && !/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/.test(trimmedStartTime)) {
       Alert.alert('Invalid Start Time', 'Please enter the routine start time in HH:MM (24h) format.');
       return;
     }
@@ -59,7 +61,7 @@ export default function CreateRoutineScreen() {
       await createRoutine({
         name: name.trim(),
         routineType,
-        startTime,
+        startTime: trimmedStartTime || null,
         dayFilter,
       });
       
@@ -147,7 +149,9 @@ export default function CreateRoutineScreen() {
         onChangeText={setStartTime}
         keyboardType="numbers-and-punctuation"
       />
-      <Text style={styles.helperText}>Routine will auto-start at this time on eligible days.</Text>
+      <Text style={styles.helperText}>
+        Optional: set a start time to auto-start this routine. Leave blank to start manually.
+      </Text>
 
       <Text style={styles.label}>Days</Text>
       <View style={styles.typeContainer}>

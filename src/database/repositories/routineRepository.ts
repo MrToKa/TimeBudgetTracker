@@ -53,6 +53,17 @@ function rowToRoutineItem(row: RoutineItemRow): RoutineItem {
   };
 }
 
+const normalizeRoutineStartTime = (value?: string | null): string | null | undefined => {
+  if (value === undefined) {
+    return undefined;
+  }
+  if (value === null) {
+    return null;
+  }
+  const trimmed = value.trim();
+  return trimmed === '' ? null : trimmed;
+};
+
 // ============================================
 // Routine CRUD Operations
 // ============================================
@@ -139,11 +150,12 @@ interface CreateRoutineInput {
 export async function createRoutine(input: CreateRoutineInput): Promise<Routine> {
   const id = uuidv4();
   const now = nowISO();
+  const normalizedStartTime = normalizeRoutineStartTime(input.startTime);
 
   await executeSql(
     `INSERT INTO routines (id, name, routine_type, start_time, day_filter, is_active, created_at, updated_at)
      VALUES (?, ?, ?, ?, ?, 1, ?, ?)`,
-    [id, input.name, input.routineType, input.startTime ?? null, input.dayFilter ?? 'all', now, now]
+    [id, input.name, input.routineType, normalizedStartTime ?? null, input.dayFilter ?? 'all', now, now]
   );
 
   const routine = await getRoutineById(id);
@@ -174,9 +186,10 @@ export async function updateRoutine(
     fields.push('routine_type = ?');
     values.push(updates.routineType);
   }
-  if (updates.startTime !== undefined) {
+  const normalizedStartTime = normalizeRoutineStartTime(updates.startTime);
+  if (normalizedStartTime !== undefined) {
     fields.push('start_time = ?');
-    values.push(updates.startTime);
+    values.push(normalizedStartTime);
   }
   if (updates.dayFilter !== undefined) {
     fields.push('day_filter = ?');

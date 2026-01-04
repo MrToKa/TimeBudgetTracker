@@ -16,7 +16,7 @@ import { RoutineWithItems } from '../types';
 import * as sessionRepository from '../database/repositories/sessionRepository';
 import { nowISO } from '../utils/dateUtils';
 import { executeQuery } from '../database/database';
-import { useRoutineExecutionStore } from '../store/routineExecutionStore';
+// Note: useRoutineExecutionStore is dynamically imported below to avoid circular dependency
 
 // Channel IDs
 const TIMER_CHANNEL_ID = 'timer-notifications';
@@ -505,6 +505,8 @@ async function startRoutineAutomatically(routineId: string): Promise<void> {
   );
 
   try {
+    // Dynamic import to avoid circular dependency
+    const { useRoutineExecutionStore } = await import('../store/routineExecutionStore');
     useRoutineExecutionStore.getState().markAutoStartedRoutine(routineId);
   } catch (e) {
     // ignore if store not available (e.g., background)
