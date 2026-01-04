@@ -25,7 +25,6 @@ function AppContent() {
   const { theme } = useTheme();
   const { loadRunningTimers, runningTimers } = useTimerStore();
   const [noTimerReminderEnabled, setNoTimerReminderEnabled] = useState(true);
-  const [noTimerReminderMinutes, setNoTimerReminderMinutes] = useState(5);
 
   useEffect(() => {
     // Initialize app
@@ -42,13 +41,9 @@ function AppContent() {
       // Load no timer reminder settings
       try {
         const enabledSetting = await getSetting('noTimerReminderEnabled');
-        const minutesSetting = await getSetting('noTimerReminderMinutes');
         
         if (enabledSetting !== null) {
           setNoTimerReminderEnabled(enabledSetting === 'true' || enabledSetting === '1');
-        }
-        if (minutesSetting !== null) {
-          setNoTimerReminderMinutes(parseInt(minutesSetting, 10) || 5);
         }
       } catch (error) {
         console.error('Error loading notification settings:', error);
@@ -60,12 +55,15 @@ function AppContent() {
 
   // Start/stop inactivity monitor based on timers and settings
   useEffect(() => {
-    if (runningTimers.length === 0 && noTimerReminderEnabled) {
-      startInactivityMonitor(false, noTimerReminderMinutes);
-    } else {
-      stopInactivityMonitor();
-    }
-  }, [runningTimers.length, noTimerReminderEnabled, noTimerReminderMinutes]);
+    const updateMonitor = async () => {
+      if (runningTimers.length === 0 && noTimerReminderEnabled) {
+        await startInactivityMonitor(false);
+      } else {
+        await stopInactivityMonitor();
+      }
+    };
+    updateMonitor();
+  }, [runningTimers.length, noTimerReminderEnabled]);
 
   return (
     <SafeAreaProvider>

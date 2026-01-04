@@ -59,10 +59,10 @@ export const useTimerStore = create<TimerState>((set, get) => ({
       
       // Update inactivity monitor based on running timers
       if (timers.length > 0) {
-        stopInactivityMonitor();
+        await stopInactivityMonitor();
         await cancelInactivityNotification();
       } else {
-        startInactivityMonitor(false);
+        await startInactivityMonitor(false);
       }
     } catch (error) {
       set({ error: (error as Error).message, isLoading: false });
@@ -140,7 +140,7 @@ export const useTimerStore = create<TimerState>((set, get) => ({
       }
       
       // Stop inactivity monitor since a timer is now running
-      stopInactivityMonitor();
+      await stopInactivityMonitor();
       await cancelInactivityNotification();
       
       // Show timer start notification
@@ -275,7 +275,7 @@ export const useTimerStore = create<TimerState>((set, get) => ({
       }
       
       // Stop inactivity monitor since a timer is now running
-      stopInactivityMonitor();
+      await stopInactivityMonitor();
       await cancelInactivityNotification();
       
       // Show timer start notification
@@ -313,7 +313,7 @@ export const useTimerStore = create<TimerState>((set, get) => ({
       // If no more timers running, start inactivity monitor
       const remainingTimers = get().runningTimers;
       if (remainingTimers.length === 0) {
-        startInactivityMonitor(false);
+        await startInactivityMonitor(false);
       }
       
       return session;
@@ -336,7 +336,7 @@ export const useTimerStore = create<TimerState>((set, get) => ({
       set({ runningTimers: [] });
       
       // Start inactivity reminders now that no timers are running
-      startInactivityMonitor(false);
+      await startInactivityMonitor(false);
       
       return count;
     } catch (error) {
