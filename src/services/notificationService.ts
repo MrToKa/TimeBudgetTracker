@@ -5,17 +5,21 @@ import notifee, {
   AndroidImportance,
   AndroidStyle,
   EventType,
+  RepeatFrequency,
   TimestampTrigger,
   TriggerType,
 } from '@notifee/react-native';
 import { getSettingBoolean, getSettingNumber } from '../database/repositories/settingsRepository';
 import { getRunningSession } from '../database/repositories/sessionRepository';
+import { getRoutineSchedules, RoutineSchedule } from '../database/repositories/routineRepository';
 
 // Channel IDs
 const TIMER_CHANNEL_ID = 'timer-notifications';
 const INACTIVITY_CHANNEL_ID = 'inactivity-notifications';
+const ROUTINE_CHANNEL_ID = 'routine-notifications';
 const INACTIVITY_NOTIFICATION_ID = 'inactivity-reminder';
 const DEFAULT_INACTIVITY_MINUTES = 5;
+const ROUTINE_NOTIFICATION_PREFIX = 'routine-start-';
 
 // ============================================
 // Setup
@@ -36,6 +40,14 @@ export async function setupNotificationChannels(): Promise<void> {
     name: 'Inactivity Notifications',
     description: 'Reminders when no timer is running',
     importance: AndroidImportance.DEFAULT,
+    sound: 'default',
+  });
+
+  await notifee.createChannel({
+    id: ROUTINE_CHANNEL_ID,
+    name: 'Routine Notifications',
+    description: 'Notifications for scheduled routine starts',
+    importance: AndroidImportance.HIGH,
     sound: 'default',
   });
 }
@@ -134,6 +146,164 @@ export async function showTimerStartNotification(activityName: string): Promise<
       color: '#3B82F6',
     },
   });
+}
+
+// ============================================
+// Routine Notifications
+// ============================================
+
+function parseRoutineTime(time: string | null): { hours: number; minutes: number } | null {
+  if (!time) {
+    return null;
+  }
+  const [hoursStr, minutesStr] = time.split(':');
+  const hours = Number(hoursStr);
+  const minutes = Number(minutesStr);
+
+  if (
+    Number.isNaN(hours) ||
+    Number.isNaN(minutes) ||
+    hours < 0 ||
+    hours > 23 ||
+    minutes < 0 ||
+    minutes > 59
+  ) {
+    return null;
+  }
+
+  return { hours, minutes };
+}
+
+function formatRoutineTime(hours: number, minutes: number): string {
+  return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+}
+
+function getNextRoutineTriggerTimestamp(schedule: RoutineSchedule): number | null {
+  const parsed = parseRoutineTime(schedule.scheduledTime);
+  if (!parsed) {
+    return null;
+  }
+
+  const now = new Date();
+  const triggerDate = new Date(now);
+  triggerDate.setHours(parsed.hours, parsed.minutes, 0, 0);
+
+  if (schedule.dayOfWeek !== null) {
+    const currentDay = triggerDate.getDay();
+    let daysToAdd = (schedule.dayOfWeek - currentDay + 7) % 7;
+    if (daysToAdd === 0 && triggerDate.getTime() <= now.getTime()) {
+      daysToAdd = 7;
+    }
+    triggerDate.setDate(triggerDate.getDate() + daysToAdd);
+  } else if (triggerDate.getTime() <= now.getTime()) {
+    triggerDate.setDate(triggerDate.getDate() + 1);
+  }
+
+  return triggerDate.getTime();
+}
+
+async function clearRoutineStartNotifications(): Promise<void> {
+  try {
+    const triggers = await notifee.getTriggerNotifications();
+    const routineIds = triggers
+      .filter(t => t.notification?.id?.startsWith(ROUTINE_NOTIFICATION_PREFIX))
+      .map(t => t.notification?.id as string);
+
+    await Promise.all(
+      routineIds.map(id =>
+        Promise.all([
+          notifee.cancelTriggerNotification(id),
+          notifee.cancelNotification(id),
+        ])
+      )
+    );
+  } catch (error) {
+    console.warn('[Routine] Failed to clear routine notifications:', error);
+  }
+}
+
+function pickEarliestRoutineSchedules(schedules: RoutineSchedule[]): RoutineSchedule[] {
+  const grouped = new Map<
+    string,
+    RoutineSchedule & { totalMinutes: number }
+  >();
+
+  schedules.forEach(schedule => {
+    const parsed = parseRoutineTime(schedule.scheduledTime);
+    if (!parsed) {
+      return;
+    }
+    const totalMinutes = parsed.hours * 60 + parsed.minutes;
+    const key = `${schedule.routineId}-${schedule.dayOfWeek ?? 'daily'}`;
+    const existing = grouped.get(key);
+    if (!existing || totalMinutes < existing.totalMinutes) {
+      grouped.set(key, {
+        ...schedule,
+        scheduledTime: formatRoutineTime(parsed.hours, parsed.minutes),
+        totalMinutes,
+      });
+    }
+  });
+
+  return Array.from(grouped.values()).map(({ totalMinutes, ...rest }) => rest);
+}
+
+export async function scheduleRoutineStartReminders(): Promise<void> {
+  try {
+    const notificationsEnabled = await getSettingBoolean('notificationsEnabled', true);
+    const routineRemindersEnabled = await getSettingBoolean('reminderRoutineStart', true);
+
+    if (!notificationsEnabled || !routineRemindersEnabled) {
+      await clearRoutineStartNotifications();
+      return;
+    }
+
+    const schedules = pickEarliestRoutineSchedules(await getRoutineSchedules());
+
+    if (schedules.length === 0) {
+      await clearRoutineStartNotifications();
+      return;
+    }
+
+    await clearRoutineStartNotifications();
+
+    for (const schedule of schedules) {
+      const triggerTime = getNextRoutineTriggerTimestamp(schedule);
+      if (!triggerTime) {
+        continue;
+      }
+
+      const trigger: TimestampTrigger = {
+        type: TriggerType.TIMESTAMP,
+        timestamp: triggerTime,
+        alarmManager: { type: AlarmType.SET_EXACT_AND_ALLOW_WHILE_IDLE },
+        repeatFrequency:
+          schedule.dayOfWeek !== null ? RepeatFrequency.WEEKLY : RepeatFrequency.DAILY,
+      };
+
+      const notificationId = `${ROUTINE_NOTIFICATION_PREFIX}${schedule.routineId}-${
+        schedule.dayOfWeek ?? 'daily'
+      }`;
+
+      await notifee.createTriggerNotification(
+        {
+          id: notificationId,
+          title: 'Routine starting',
+          body: `It's time to start your "${schedule.routineName}" routine.`,
+          android: {
+            channelId: ROUTINE_CHANNEL_ID,
+            importance: AndroidImportance.HIGH,
+            pressAction: { id: 'default' },
+            smallIcon: 'ic_launcher',
+            color: '#3B82F6',
+          },
+        },
+        trigger
+      );
+    }
+  } catch (error) {
+    console.warn('[Routine] Failed to schedule routine reminders:', error);
+  }
 }
 
 // ============================================

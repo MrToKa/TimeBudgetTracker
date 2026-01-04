@@ -22,6 +22,7 @@ import {
   deleteRoutineItem,
 } from '../../database/repositories/routineRepository';
 import { useRoutineExecutionStore } from '../../store/routineExecutionStore';
+import { scheduleRoutineStartReminders } from '../../services/notificationService';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 type RoutineDetailRouteProp = RouteProp<RootStackParamList, 'RoutineDetail'>;
@@ -85,6 +86,7 @@ export default function RoutineDetailScreen() {
         name: name.trim(),
         routineType,
       });
+      await scheduleRoutineStartReminders();
       Alert.alert('Success', 'Routine updated successfully');
       navigation.goBack();
     } catch (error) {
@@ -108,6 +110,9 @@ export default function RoutineDetailScreen() {
             try {
               await deleteRoutineItem(itemId);
               loadRoutine();
+              scheduleRoutineStartReminders().catch(err =>
+                console.warn('[Routine] Failed to reschedule reminders after delete:', err)
+              );
             } catch (error) {
               console.error('Error deleting item:', error);
               Alert.alert('Error', 'Failed to remove activity');

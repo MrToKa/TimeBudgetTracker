@@ -16,6 +16,7 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { Card, Button } from '../../components/common';
 import { Routine, RoutineType, RootStackParamList } from '../../types';
 import { getAllRoutines, deleteRoutine, toggleRoutineActive } from '../../database/repositories/routineRepository';
+import { scheduleRoutineStartReminders } from '../../services/notificationService';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -64,6 +65,7 @@ export default function RoutinesScreen() {
   const handleToggleActive = async (routine: Routine) => {
     try {
       await toggleRoutineActive(routine.id);
+      await scheduleRoutineStartReminders();
       loadRoutines();
     } catch (error) {
       console.error('Error toggling routine:', error);
@@ -83,6 +85,7 @@ export default function RoutinesScreen() {
           onPress: async () => {
             try {
               await deleteRoutine(routine.id);
+              await scheduleRoutineStartReminders();
               loadRoutines();
             } catch (error) {
               console.error('Error deleting routine:', error);

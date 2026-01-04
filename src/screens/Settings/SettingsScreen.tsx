@@ -13,6 +13,7 @@ import { useTheme, ThemeMode } from '../../contexts/ThemeContext';
 import { Card } from '../../components/common';
 import { AppSettings, DEFAULT_SETTINGS } from '../../types';
 import { getSetting, setSetting, getAllSettings } from '../../database/repositories/settingsRepository';
+import { scheduleRoutineStartReminders } from '../../services/notificationService';
 
 interface SettingItem {
   key: keyof AppSettings;
@@ -149,6 +150,11 @@ export default function SettingsScreen() {
     try {
       await setSetting(key, String(value));
       setSettings(prev => ({ ...prev, [key]: value }));
+      if (key === 'notificationsEnabled' || key === 'reminderRoutineStart') {
+        scheduleRoutineStartReminders().catch(err =>
+          console.warn('[Routine] Failed to reschedule reminders from settings:', err)
+        );
+      }
     } catch (error) {
       console.error('Error saving setting:', error);
       Alert.alert('Error', 'Failed to save setting');

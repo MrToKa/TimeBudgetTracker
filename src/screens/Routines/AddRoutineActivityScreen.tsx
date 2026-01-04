@@ -18,6 +18,7 @@ import { Card } from '../../components/common';
 import { RootStackParamList, ActivityWithCategory } from '../../types';
 import { addRoutineItem } from '../../database/repositories/routineRepository';
 import { getActivitiesWithCategories } from '../../database/repositories/activityRepository';
+import { scheduleRoutineStartReminders } from '../../services/notificationService';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 type AddRoutineActivityRouteProp = RouteProp<RootStackParamList, 'AddRoutineActivity'>;
@@ -77,6 +78,7 @@ export default function AddRoutineActivityScreen() {
         scheduledTime: scheduledTime || null,
         expectedDurationMinutes: minutes,
       });
+      await scheduleRoutineStartReminders();
 
       Alert.alert('Success', 'Activity added to routine');
       navigation.goBack();

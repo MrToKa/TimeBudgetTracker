@@ -215,6 +215,14 @@ interface CreateRoutineItemInput {
   dayOfWeek?: number | null;
 }
 
+export interface RoutineSchedule {
+  routineId: string;
+  routineName: string;
+  routineType: RoutineType;
+  scheduledTime: string;
+  dayOfWeek: number | null;
+}
+
 export async function addRoutineItem(input: CreateRoutineItemInput): Promise<RoutineItem> {
   const id = uuidv4();
 
@@ -314,4 +322,33 @@ export async function reorderRoutineItems(
       [i, itemIds[i], routineId]
     );
   }
+}
+
+export async function getRoutineSchedules(): Promise<RoutineSchedule[]> {
+  const rows = await executeQuery<{
+    routine_id: string;
+    routine_name: string;
+    routine_type: RoutineType;
+    scheduledTime: string;
+    dayOfWeek: number | null;
+  }>(
+    `SELECT 
+       r.id as routine_id,
+       r.name as routine_name,
+       r.routine_type,
+       ri.scheduled_time as scheduledTime,
+       ri.day_of_week as dayOfWeek
+     FROM routines r
+     JOIN routine_items ri ON ri.routine_id = r.id
+     WHERE r.is_active = 1
+       AND ri.scheduled_time IS NOT NULL`
+  );
+
+  return rows.map(row => ({
+    routineId: row.routine_id,
+    routineName: row.routine_name,
+    routineType: row.routine_type,
+    scheduledTime: row.scheduledTime,
+    dayOfWeek: row.dayOfWeek ?? null,
+  }));
 }

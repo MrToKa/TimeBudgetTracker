@@ -17,6 +17,7 @@ import {
   requestNotificationPermissions,
   startInactivityMonitor,
   stopInactivityMonitor,
+  scheduleRoutineStartReminders,
 } from './src/services/notificationService';
 import { useTimerStore } from './src/store/timerStore';
 import { getSetting } from './src/database/repositories/settingsRepository';
@@ -37,6 +38,9 @@ function AppContent() {
       
       // Load running timers
       await loadRunningTimers();
+      
+      // Schedule routine start reminders
+      await scheduleRoutineStartReminders();
       
       // Load no timer reminder settings
       try {
