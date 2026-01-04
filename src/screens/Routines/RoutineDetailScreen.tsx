@@ -271,7 +271,11 @@ export default function RoutineDetailScreen() {
         items.map((item) => (
           <Card key={item.id} style={styles.itemCard}>
             <View style={styles.itemHeader}>
-              <View style={styles.itemInfo}>
+              <TouchableOpacity
+                style={styles.itemInfo}
+                activeOpacity={0.8}
+                onPress={() => navigation.navigate('AddRoutineActivity', { routineId, itemId: item.id })}
+              >
                 <Text style={styles.itemName}>{item.activity.name}</Text>
                 {item.scheduledTime && (
                   <View style={styles.timeRow}>
@@ -284,13 +288,21 @@ export default function RoutineDetailScreen() {
                     {item.expectedDurationMinutes} min
                   </Text>
                 )}
-              </View>
-              <TouchableOpacity
-                onPress={() => handleDeleteItem(item.id, item.activity.name)}
-                style={styles.deleteButton}
-              >
-                <Icon name="close" size={20} color={theme.error} />
               </TouchableOpacity>
+              <View style={styles.itemActions}>
+                <TouchableOpacity
+                  onPress={() => navigation.navigate('AddRoutineActivity', { routineId, itemId: item.id })}
+                  style={styles.actionButton}
+                >
+                  <Icon name="pencil-outline" size={20} color={theme.primary} />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => handleDeleteItem(item.id, item.activity.name)}
+                  style={[styles.deleteButton, styles.actionButton]}
+                >
+                  <Icon name="close" size={20} color={theme.error} />
+                </TouchableOpacity>
+              </View>
             </View>
           </Card>
         ))
@@ -453,6 +465,11 @@ const createStyles = (theme: ReturnType<typeof useTheme>['theme']) => StyleSheet
   itemInfo: {
     flex: 1,
   },
+  itemActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
   itemName: {
     fontSize: 16,
     fontWeight: '600',
@@ -473,6 +490,9 @@ const createStyles = (theme: ReturnType<typeof useTheme>['theme']) => StyleSheet
     fontSize: 13,
     color: theme.textSecondary,
     marginTop: 2,
+  },
+  actionButton: {
+    padding: 8,
   },
   deleteButton: {
     padding: 4,

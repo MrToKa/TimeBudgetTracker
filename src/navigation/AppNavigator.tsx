@@ -234,7 +234,9 @@ export default function AppNavigator() {
         <Stack.Screen 
           name="AddRoutineActivity" 
           component={AddRoutineActivityScreen}
-          options={{ title: 'Add Activity' }}
+          options={({ route }) => ({
+            title: route.params?.itemId ? 'Edit Activity' : 'Add Activity',
+          })}
         />
       </Stack.Navigator>
     </NavigationContainer>

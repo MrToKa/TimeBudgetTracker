@@ -16,7 +16,7 @@ import { useTheme } from '../../contexts/ThemeContext';
 import Button from '../../components/common/Button';
 import { Card } from '../../components/common';
 import { RootStackParamList, ActivityWithCategory } from '../../types';
-import { addRoutineItem } from '../../database/repositories/routineRepository';
+import { addRoutineItem, getRoutineWithItems, updateRoutineItem } from '../../database/repositories/routineRepository';
 import { getActivitiesWithCategories } from '../../database/repositories/activityRepository';
 import { scheduleRoutineStartReminders } from '../../services/notificationService';
 
@@ -26,7 +26,8 @@ type AddRoutineActivityRouteProp = RouteProp<RootStackParamList, 'AddRoutineActi
 export default function AddRoutineActivityScreen() {
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<AddRoutineActivityRouteProp>();
-  const { routineId } = route.params;
+  const { routineId, itemId } = route.params;
+  const isEditing = Boolean(itemId);
   const { theme } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
 
@@ -40,17 +41,50 @@ export default function AddRoutineActivityScreen() {
   useEffect(() => {
     const loadActivities = async () => {
       try {
-        const data = await getActivitiesWithCategories(false);
-        setActivities(data.filter((a: ActivityWithCategory) => !a.isArchived));
+        const [activityData, routine] = await Promise.all([
+          getActivitiesWithCategories(false),
+          itemId ? getRoutineWithItems(routineId) : Promise.resolve(null),
+        ]);
+
+        const routineItem = itemId
+          ? routine?.items.find(item => item.id === itemId) ?? null
+          : null;
+
+        if (itemId && !routineItem) {
+          Alert.alert('Error', 'Activity not found in this routine.');
+          navigation.goBack();
+          return;
+        }
+
+        const filteredActivities = activityData.filter(
+          (activity: ActivityWithCategory) =>
+            !activity.isArchived || (routineItem && activity.id === routineItem.activityId)
+        );
+
+        setActivities(filteredActivities);
+
+        if (routineItem) {
+          const matchedActivity =
+            filteredActivities.find(activity => activity.id === routineItem.activityId) ?? null;
+          setSelectedActivity(matchedActivity);
+          setScheduledTime(routineItem.scheduledTime ?? '');
+          setExpectedMinutes(
+            routineItem.expectedDurationMinutes !== null &&
+            routineItem.expectedDurationMinutes !== undefined
+              ? String(routineItem.expectedDurationMinutes)
+              : ''
+          );
+        }
       } catch (error) {
         console.error('Error loading activities:', error);
         Alert.alert('Error', 'Failed to load activities');
+        navigation.goBack();
       } finally {
         setLoading(false);
       }
     };
     loadActivities();
-  }, []);
+  }, [itemId, navigation, routineId]);
 
   const handleSave = async () => {
     if (!selectedActivity) {
@@ -72,19 +106,27 @@ export default function AddRoutineActivityScreen() {
 
     setSaving(true);
     try {
-      await addRoutineItem({
-        routineId,
-        activityId: selectedActivity.id,
-        scheduledTime: scheduledTime || null,
-        expectedDurationMinutes: minutes,
-      });
+      if (isEditing && itemId) {
+        await updateRoutineItem(itemId, {
+          activityId: selectedActivity.id,
+          scheduledTime: scheduledTime || null,
+          expectedDurationMinutes: minutes,
+        });
+        Alert.alert('Success', 'Routine activity updated');
+      } else {
+        await addRoutineItem({
+          routineId,
+          activityId: selectedActivity.id,
+          scheduledTime: scheduledTime || null,
+          expectedDurationMinutes: minutes,
+        });
+        Alert.alert('Success', 'Activity added to routine');
+      }
       await scheduleRoutineStartReminders();
-
-      Alert.alert('Success', 'Activity added to routine');
       navigation.goBack();
     } catch (error) {
-      console.error('Error adding activity:', error);
-      Alert.alert('Error', 'Failed to add activity to routine');
+      console.error('Error saving routine activity:', error);
+      Alert.alert('Error', isEditing ? 'Failed to update activity' : 'Failed to add activity to routine');
     } finally {
       setSaving(false);
     }
@@ -100,9 +142,9 @@ export default function AddRoutineActivityScreen() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.title}>Add Activity to Routine</Text>
+      <Text style={styles.title}>{isEditing ? 'Edit Routine Activity' : 'Add Activity to Routine'}</Text>
       <Text style={styles.subtitle}>
-        Select an activity and optionally set a scheduled time.
+        Select an activity and {isEditing ? 'update its schedule or duration.' : 'optionally set a scheduled time.'}
       </Text>
 
       <Text style={styles.label}>Select Activity</Text>
@@ -181,7 +223,7 @@ export default function AddRoutineActivityScreen() {
           </View>
 
           <Button
-            title={saving ? 'Adding...' : 'Add to Routine'}
+            title={saving ? (isEditing ? 'Saving...' : 'Adding...') : isEditing ? 'Save Changes' : 'Add to Routine'}
             onPress={handleSave}
             disabled={saving}
             style={styles.saveButton}
