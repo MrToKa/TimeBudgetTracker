@@ -79,6 +79,7 @@ export default function ManualAddScreen() {
       <TextInput
         style={styles.input}
         placeholder="e.g. Language learning"
+        placeholderTextColor={theme.inputPlaceholder}
         value={activityName}
         onChangeText={setActivityName}
       />
@@ -90,6 +91,7 @@ export default function ManualAddScreen() {
         value={budgetMinutes}
         onChangeText={setBudgetMinutes}
         placeholder="e.g. 30"
+        placeholderTextColor={theme.inputPlaceholder}
       />
       <Text style={styles.helperText}>
         You'll be notified 5 minutes before time's up and when the timer is overdue.

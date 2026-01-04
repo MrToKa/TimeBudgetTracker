@@ -46,6 +46,7 @@ export const CREATE_TIME_SESSIONS_TABLE = `
     activity_name_snapshot TEXT NOT NULL,
     category_id TEXT,
     category_name_snapshot TEXT NOT NULL,
+    routine_id TEXT,
     start_time TEXT NOT NULL,
     end_time TEXT,
     actual_duration_minutes INTEGER,
@@ -80,6 +81,8 @@ export const CREATE_ROUTINES_TABLE = `
     id TEXT PRIMARY KEY NOT NULL,
     name TEXT NOT NULL,
     routine_type TEXT CHECK(routine_type IN ('daily', 'weekly')) NOT NULL,
+    start_time TEXT,
+    day_filter TEXT CHECK(day_filter IN ('all', 'weekdays', 'weekend')) DEFAULT 'all',
     is_active INTEGER DEFAULT 1,
     created_at TEXT DEFAULT CURRENT_TIMESTAMP,
     updated_at TEXT DEFAULT CURRENT_TIMESTAMP

@@ -64,9 +64,9 @@ export default function AddRoutineActivityScreen() {
       return;
     }
 
-    const minutes = expectedMinutes ? parseInt(expectedMinutes, 10) : null;
-    if (expectedMinutes && (isNaN(minutes!) || minutes! <= 0)) {
-      Alert.alert('Invalid Duration', 'Please enter a valid duration in minutes');
+    const minutes = parseInt(expectedMinutes, 10);
+    if (!expectedMinutes || isNaN(minutes) || minutes <= 0) {
+      Alert.alert('Invalid Duration', 'Please enter a valid duration in minutes (required)');
       return;
     }
 
@@ -156,6 +156,7 @@ export default function AddRoutineActivityScreen() {
             <TextInput
               style={styles.timeInput}
               placeholder="HH:MM (e.g., 09:30)"
+              placeholderTextColor={theme.inputPlaceholder}
               value={scheduledTime}
               onChangeText={setScheduledTime}
               keyboardType="numbers-and-punctuation"
@@ -165,20 +166,19 @@ export default function AddRoutineActivityScreen() {
             Leave empty if this activity doesn't have a specific time
           </Text>
 
-          <Text style={styles.label}>Expected Duration (Optional)</Text>
+          <Text style={styles.label}>Expected Duration</Text>
+          <Text style={styles.helperText}>Required for automatic progression</Text>
           <View style={styles.inputRow}>
             <Icon name="timer-outline" size={20} color={theme.textSecondary} />
             <TextInput
               style={styles.timeInput}
               placeholder="Minutes (e.g., 45)"
+              placeholderTextColor={theme.inputPlaceholder}
               value={expectedMinutes}
               onChangeText={setExpectedMinutes}
               keyboardType="numeric"
             />
           </View>
-          <Text style={styles.helperText}>
-            How long you expect this activity to take
-          </Text>
 
           <Button
             title={saving ? 'Adding...' : 'Add to Routine'}

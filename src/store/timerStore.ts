@@ -49,6 +49,7 @@ export const useTimerStore = create<TimerState>((set, get) => ({
         categoryId: session.categoryId,
         categoryName: session.categoryNameSnapshot,
         categoryColor: '#6B7280', // Default, will be updated from session details
+        routineId: session.routineId ?? null,
         startTime: new Date(session.startTime),
         expectedDurationMinutes: session.expectedDurationMinutes,
         isPlanned: session.isPlanned,

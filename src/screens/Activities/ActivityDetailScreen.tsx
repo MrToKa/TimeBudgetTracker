@@ -133,6 +133,7 @@ export default function ActivityDetailScreen() {
       <TextInput
         style={styles.input}
         placeholder="Activity name"
+        placeholderTextColor={theme.inputPlaceholder}
         value={name}
         onChangeText={setName}
       />
@@ -152,6 +153,7 @@ export default function ActivityDetailScreen() {
         value={defaultExpected}
         onChangeText={setDefaultExpected}
         placeholder="e.g. 45"
+        placeholderTextColor={theme.inputPlaceholder}
       />
 
       <View style={styles.row}>

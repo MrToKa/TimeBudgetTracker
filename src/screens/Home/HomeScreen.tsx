@@ -1,7 +1,7 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { View, Text, ScrollView, StyleSheet, ActivityIndicator, TouchableOpacity, Alert } from 'react-native';
 import { StackNavigationProp } from '@react-navigation/stack';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
 import { useActivityStore } from '../../store/activityStore';
@@ -26,7 +26,10 @@ export default function HomeScreen() {
     nextActivity, 
     stopRoutine,
     getCurrentActivityDuration,
-    getTotalRoutineDuration
+    getTotalRoutineDuration,
+    hydrateRunningRoutine,
+    lastAutoStartedRoutineId,
+    markAutoStartedRoutine,
   } = useRoutineExecutionStore();
   const [loading, setLoading] = useState(true);
   const [currentTime, setCurrentTime] = useState(Date.now());
@@ -36,10 +39,26 @@ export default function HomeScreen() {
   useEffect(() => {
     const load = async () => {
       await Promise.all([loadFavorites(), loadActivities(), loadCategories(), loadRunningTimers()]);
+      await hydrateRunningRoutine();
       setLoading(false);
     };
     load();
-  }, [loadFavorites, loadActivities, loadCategories, loadRunningTimers]);
+  }, [loadFavorites, loadActivities, loadCategories, loadRunningTimers, hydrateRunningRoutine]);
+
+  // When an auto-started routine fires in background, hydrate once app returns
+  useEffect(() => {
+    if (lastAutoStartedRoutineId) {
+      hydrateRunningRoutine();
+      markAutoStartedRoutine(null);
+    }
+  }, [lastAutoStartedRoutineId, hydrateRunningRoutine, markAutoStartedRoutine]);
+
+  // Check for autostarted routines whenever screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      hydrateRunningRoutine();
+    }, [hydrateRunningRoutine])
+  );
 
   // Update timer every second when routine is running
   useEffect(() => {
@@ -198,18 +217,29 @@ export default function HomeScreen() {
                       </Text>
                     </TouchableOpacity>
                     
-                    <TouchableOpacity
-                      style={[styles.controlButton, styles.nextButton]}
-                      onPress={handleNextActivity}
-                      disabled={runningRoutine.currentActivityIndex === runningRoutine.activities.length - 1}
-                    >
-                      <Icon name="skip-next" size={24} color={theme.white} />
-                      <Text style={[styles.controlButtonText, styles.nextButtonText]}>
-                        {runningRoutine.currentActivityIndex === runningRoutine.activities.length - 1
-                          ? 'Last Activity'
-                          : 'Next Activity'}
-                      </Text>
-                    </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.controlButton, styles.nextButton]}
+                    onPress={
+                      runningRoutine.currentActivityIndex === runningRoutine.activities.length - 1
+                        ? handleStopRoutine
+                        : handleNextActivity
+                    }
+                  >
+                    <Icon
+                      name={
+                        runningRoutine.currentActivityIndex === runningRoutine.activities.length - 1
+                          ? 'stop'
+                          : 'skip-next'
+                      }
+                      size={24}
+                      color={theme.white}
+                    />
+                    <Text style={[styles.controlButtonText, styles.nextButtonText]}>
+                      {runningRoutine.currentActivityIndex === runningRoutine.activities.length - 1
+                        ? 'Finish Routine'
+                        : 'Next Activity'}
+                    </Text>
+                  </TouchableOpacity>
                   </View>
 
                   {runningRoutine.currentActivityIndex < runningRoutine.activities.length - 1 && (

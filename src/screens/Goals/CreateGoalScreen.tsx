@@ -250,7 +250,7 @@ export default function CreateGoalScreen() {
                 onChangeText={setHours}
                 keyboardType="numeric"
                 placeholder="0"
-                placeholderTextColor={theme.textTertiary}
+                placeholderTextColor={theme.inputPlaceholder}
                 maxLength={3}
               />
               <Text style={styles.timeLabel}>hours</Text>
@@ -262,7 +262,7 @@ export default function CreateGoalScreen() {
                 onChangeText={setMinutes}
                 keyboardType="numeric"
                 placeholder="0"
-                placeholderTextColor={theme.textTertiary}
+                placeholderTextColor={theme.inputPlaceholder}
                 maxLength={2}
               />
               <Text style={styles.timeLabel}>minutes</Text>

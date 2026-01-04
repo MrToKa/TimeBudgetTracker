@@ -46,6 +46,8 @@ export default function RoutineDetailScreen() {
   const [starting, setStarting] = useState(false);
   const [name, setName] = useState('');
   const [routineType, setRoutineType] = useState<RoutineType>('daily');
+  const [startTime, setStartTime] = useState('');
+  const [dayFilter, setDayFilter] = useState<'all' | 'weekdays' | 'weekend'>('all');
   const [items, setItems] = useState<any[]>([]);
 
   const loadRoutine = useCallback(async () => {
@@ -54,6 +56,8 @@ export default function RoutineDetailScreen() {
       if (routine) {
         setName(routine.name);
         setRoutineType(routine.routineType);
+        setStartTime(routine.startTime ?? '');
+        setDayFilter(routine.dayFilter ?? 'all');
         setItems(routine.items);
       } else {
         Alert.alert('Error', 'Routine not found');
@@ -80,11 +84,18 @@ export default function RoutineDetailScreen() {
       return;
     }
 
+    if (!/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/.test(startTime)) {
+      Alert.alert('Invalid Start Time', 'Please enter the routine start time in HH:MM (24h) format.');
+      return;
+    }
+
     setSaving(true);
     try {
       await updateRoutine(routineId, {
         name: name.trim(),
         routineType,
+        startTime,
+        dayFilter,
       });
       await scheduleRoutineStartReminders();
       Alert.alert('Success', 'Routine updated successfully');
@@ -161,6 +172,7 @@ export default function RoutineDetailScreen() {
       <TextInput
         style={styles.input}
         placeholder="e.g., Morning Routine, Workday"
+        placeholderTextColor={theme.inputPlaceholder}
         value={name}
         onChangeText={setName}
       />
@@ -188,6 +200,49 @@ export default function RoutineDetailScreen() {
               ]}
             >
               {item.label}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
+      <Text style={styles.label}>Start Time</Text>
+      <TextInput
+        style={styles.input}
+        placeholder="HH:MM (24h)"
+        placeholderTextColor={theme.inputPlaceholder}
+        value={startTime}
+        onChangeText={setStartTime}
+        keyboardType="numbers-and-punctuation"
+      />
+      <Text style={styles.helperText}>Routine will auto-start at this time on eligible days.</Text>
+
+      <Text style={styles.label}>Days</Text>
+      <View style={styles.dayContainer}>
+        {[
+          { key: 'all', label: 'All Days', icon: 'calendar-range' },
+          { key: 'weekdays', label: 'Weekdays', icon: 'briefcase' },
+          { key: 'weekend', label: 'Weekend', icon: 'beach' },
+        ].map(option => (
+          <TouchableOpacity
+            key={option.key}
+            style={[
+              styles.dayCard,
+              dayFilter === option.key && styles.dayCardSelected,
+            ]}
+            onPress={() => setDayFilter(option.key as typeof dayFilter)}
+          >
+            <Icon
+              name={option.icon}
+              size={20}
+              color={dayFilter === option.key ? theme.secondary : theme.textSecondary}
+            />
+            <Text
+              style={[
+                styles.dayLabel,
+                dayFilter === option.key && styles.dayLabelSelected,
+              ]}
+            >
+              {option.label}
             </Text>
           </TouchableOpacity>
         ))}
@@ -292,6 +347,11 @@ const createStyles = (theme: ReturnType<typeof useTheme>['theme']) => StyleSheet
     fontSize: 16,
     color: theme.textPrimary,
   },
+  helperText: {
+    fontSize: 12,
+    color: theme.textSecondary,
+    marginTop: 4,
+  },
   typeContainer: {
     flexDirection: 'row',
     gap: 12,
@@ -318,6 +378,35 @@ const createStyles = (theme: ReturnType<typeof useTheme>['theme']) => StyleSheet
     color: theme.textPrimary,
   },
   typeLabelSelected: {
+    color: theme.secondary,
+  },
+  dayContainer: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 4,
+  },
+  dayCard: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    padding: 12,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: theme.border,
+    backgroundColor: theme.surface,
+  },
+  dayCardSelected: {
+    borderColor: theme.secondary,
+    backgroundColor: theme.secondary + '08',
+  },
+  dayLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: theme.textPrimary,
+  },
+  dayLabelSelected: {
     color: theme.secondary,
   },
   sectionHeader: {

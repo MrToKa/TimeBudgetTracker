@@ -128,6 +128,7 @@ export default function EditActivityScreen() {
       <TextInput
         style={styles.input}
         placeholder="e.g. Computer skills"
+        placeholderTextColor={theme.inputPlaceholder}
         value={name}
         onChangeText={setName}
       />
@@ -139,6 +140,7 @@ export default function EditActivityScreen() {
         value={defaultExpected}
         onChangeText={setDefaultExpected}
         placeholder="e.g. 45"
+        placeholderTextColor={theme.inputPlaceholder}
       />
 
       <View style={styles.row}>

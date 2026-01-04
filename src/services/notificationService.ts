@@ -11,12 +11,18 @@ import notifee, {
 } from '@notifee/react-native';
 import { getSettingBoolean, getSettingNumber } from '../database/repositories/settingsRepository';
 import { getRunningSession } from '../database/repositories/sessionRepository';
-import { getRoutineSchedules, RoutineSchedule } from '../database/repositories/routineRepository';
+import { getRoutineSchedules, RoutineSchedule, getRoutineWithItems } from '../database/repositories/routineRepository';
+import { RoutineWithItems } from '../types';
+import * as sessionRepository from '../database/repositories/sessionRepository';
+import { nowISO } from '../utils/dateUtils';
+import { executeQuery } from '../database/database';
+import { useRoutineExecutionStore } from '../store/routineExecutionStore';
 
 // Channel IDs
 const TIMER_CHANNEL_ID = 'timer-notifications';
 const INACTIVITY_CHANNEL_ID = 'inactivity-notifications';
 const ROUTINE_CHANNEL_ID = 'routine-notifications';
+const ROUTINE_STEP_PREFIX = 'routine-step-';
 const INACTIVITY_NOTIFICATION_ID = 'inactivity-reminder';
 const DEFAULT_INACTIVITY_MINUTES = 5;
 const ROUTINE_NOTIFICATION_PREFIX = 'routine-start-';
@@ -178,6 +184,19 @@ function formatRoutineTime(hours: number, minutes: number): string {
   return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
 }
 
+function isDayAllowed(date: Date, filter: RoutineSchedule['dayFilter']): boolean {
+  if (filter === 'all') {
+    return true;
+  }
+
+  const day = date.getDay(); // 0 Sunday
+  const isWeekend = day === 0 || day === 6;
+  if (filter === 'weekdays') {
+    return !isWeekend;
+  }
+  return isWeekend;
+}
+
 function getNextRoutineTriggerTimestamp(schedule: RoutineSchedule): number | null {
   const parsed = parseRoutineTime(schedule.scheduledTime);
   if (!parsed) {
@@ -188,15 +207,11 @@ function getNextRoutineTriggerTimestamp(schedule: RoutineSchedule): number | nul
   const triggerDate = new Date(now);
   triggerDate.setHours(parsed.hours, parsed.minutes, 0, 0);
 
-  if (schedule.dayOfWeek !== null) {
-    const currentDay = triggerDate.getDay();
-    let daysToAdd = (schedule.dayOfWeek - currentDay + 7) % 7;
-    if (daysToAdd === 0 && triggerDate.getTime() <= now.getTime()) {
-      daysToAdd = 7;
-    }
-    triggerDate.setDate(triggerDate.getDate() + daysToAdd);
-  } else if (triggerDate.getTime() <= now.getTime()) {
+  let attempts = 0;
+  while ((!isDayAllowed(triggerDate, schedule.dayFilter) || triggerDate.getTime() <= now.getTime()) && attempts < 7) {
     triggerDate.setDate(triggerDate.getDate() + 1);
+    triggerDate.setHours(parsed.hours, parsed.minutes, 0, 0);
+    attempts++;
   }
 
   return triggerDate.getTime();
@@ -222,6 +237,26 @@ async function clearRoutineStartNotifications(): Promise<void> {
   }
 }
 
+async function clearRoutineStepNotifications(): Promise<void> {
+  try {
+    const triggers = await notifee.getTriggerNotifications();
+    const routineIds = triggers
+      .filter(t => t.notification?.id?.startsWith(ROUTINE_STEP_PREFIX))
+      .map(t => t.notification?.id as string);
+
+    await Promise.all(
+      routineIds.map(id =>
+        Promise.all([
+          notifee.cancelTriggerNotification(id),
+          notifee.cancelNotification(id),
+        ])
+      )
+    );
+  } catch (error) {
+    console.warn('[Routine] Failed to clear routine step notifications:', error);
+  }
+}
+
 function pickEarliestRoutineSchedules(schedules: RoutineSchedule[]): RoutineSchedule[] {
   const grouped = new Map<
     string,
@@ -234,7 +269,7 @@ function pickEarliestRoutineSchedules(schedules: RoutineSchedule[]): RoutineSche
       return;
     }
     const totalMinutes = parsed.hours * 60 + parsed.minutes;
-    const key = `${schedule.routineId}-${schedule.dayOfWeek ?? 'daily'}`;
+    const key = `${schedule.routineId}-start`;
     const existing = grouped.get(key);
     if (!existing || totalMinutes < existing.totalMinutes) {
       grouped.set(key, {
@@ -261,11 +296,11 @@ export async function scheduleRoutineStartReminders(): Promise<void> {
     const schedules = pickEarliestRoutineSchedules(await getRoutineSchedules());
 
     if (schedules.length === 0) {
-      await clearRoutineStartNotifications();
+      await Promise.all([clearRoutineStartNotifications(), clearRoutineStepNotifications()]);
       return;
     }
 
-    await clearRoutineStartNotifications();
+    await Promise.all([clearRoutineStartNotifications(), clearRoutineStepNotifications()]);
 
     for (const schedule of schedules) {
       const triggerTime = getNextRoutineTriggerTimestamp(schedule);
@@ -277,19 +312,17 @@ export async function scheduleRoutineStartReminders(): Promise<void> {
         type: TriggerType.TIMESTAMP,
         timestamp: triggerTime,
         alarmManager: { type: AlarmType.SET_EXACT_AND_ALLOW_WHILE_IDLE },
-        repeatFrequency:
-          schedule.dayOfWeek !== null ? RepeatFrequency.WEEKLY : RepeatFrequency.DAILY,
+        repeatFrequency: RepeatFrequency.NONE,
       };
 
-      const notificationId = `${ROUTINE_NOTIFICATION_PREFIX}${schedule.routineId}-${
-        schedule.dayOfWeek ?? 'daily'
-      }`;
+      const notificationId = `${ROUTINE_NOTIFICATION_PREFIX}${schedule.routineId}`;
 
       await notifee.createTriggerNotification(
         {
           id: notificationId,
           title: 'Routine starting',
           body: `It's time to start your "${schedule.routineName}" routine.`,
+          data: { routineId: schedule.routineId },
           android: {
             channelId: ROUTINE_CHANNEL_ID,
             importance: AndroidImportance.HIGH,
@@ -303,6 +336,178 @@ export async function scheduleRoutineStartReminders(): Promise<void> {
     }
   } catch (error) {
     console.warn('[Routine] Failed to schedule routine reminders:', error);
+  }
+}
+
+// ============================================
+// Routine Automation (auto start + progression)
+// ============================================
+
+async function scheduleRoutineStepTrigger(
+  routineId: string,
+  currentIndex: number,
+  durationMinutes: number,
+  currentSessionId: string
+): Promise<void> {
+  try {
+    const triggers = await notifee.getTriggerNotifications();
+    const existing = triggers.filter(t =>
+      t.notification?.id?.startsWith(`${ROUTINE_STEP_PREFIX}${routineId}-`)
+    );
+    await Promise.all(
+      existing.map(t =>
+        Promise.all([
+          notifee.cancelTriggerNotification(t.notification?.id as string),
+          notifee.cancelNotification(t.notification?.id as string),
+        ])
+      )
+    );
+  } catch (error) {
+    console.warn('[Routine] Failed to clear previous step triggers:', error);
+  }
+
+  const triggerTime = Date.now() + durationMinutes * 60 * 1000;
+  const trigger: TimestampTrigger = {
+    type: TriggerType.TIMESTAMP,
+    timestamp: triggerTime,
+    alarmManager: { type: AlarmType.SET_EXACT_AND_ALLOW_WHILE_IDLE },
+  };
+
+  const nextIndex = currentIndex + 1;
+  const notificationId = `${ROUTINE_STEP_PREFIX}${routineId}-${nextIndex}`;
+
+  await notifee.createTriggerNotification(
+    {
+      id: notificationId,
+      title: 'Routine progressing',
+      body: 'Moving to the next activity in your routine.',
+      data: { routineId, nextIndex, previousSessionId: currentSessionId },
+      android: {
+        channelId: ROUTINE_CHANNEL_ID,
+        importance: AndroidImportance.DEFAULT,
+        pressAction: { id: 'default' },
+        smallIcon: 'ic_launcher',
+        color: '#3B82F6',
+      },
+    },
+    trigger
+  );
+}
+
+async function startRoutineActivity(
+  routine: RoutineWithItems,
+  activityIndex: number,
+  previousSessionId?: string
+): Promise<void> {
+  const activity = routine.items[activityIndex];
+  const expectedMinutes =
+    activity.expectedDurationMinutes ?? activity.activity.defaultExpectedMinutes;
+
+  if (!expectedMinutes || expectedMinutes <= 0) {
+    console.warn(`[Routine] Missing duration for activity ${activity.activity.name}, skipping`);
+    if (previousSessionId) {
+      await sessionRepository.stopSession(previousSessionId);
+    }
+    const nextIndex = activityIndex + 1;
+    if (nextIndex < routine.items.length) {
+      await startRoutineActivity(routine, nextIndex);
+    } else {
+      await scheduleRoutineStartReminders();
+    }
+    return;
+  }
+
+  if (previousSessionId) {
+    await sessionRepository.stopSession(previousSessionId);
+  }
+
+  const start = nowISO();
+  const categoryRows = await executeQuery<{ id: string; name: string; color: string }>(
+    'SELECT id, name, color FROM categories WHERE id = ?',
+    [activity.activity.categoryId]
+  );
+  const category = categoryRows[0];
+  const session = await sessionRepository.createSession({
+    activityId: activity.activityId,
+    activityNameSnapshot: activity.activity.name,
+    categoryId: activity.activity.categoryId,
+    categoryNameSnapshot: category?.name ?? 'Routine',
+    routineId: routine.id,
+    startTime: start,
+    isPlanned: true,
+    expectedDurationMinutes: expectedMinutes,
+    source: 'routine',
+    isRunning: true,
+    idlePromptEnabled: false,
+  });
+
+  await scheduleTimerWarning(session.id, activity.activity.name, expectedMinutes, new Date(start));
+  await showTimerStartNotification(activity.activity.name);
+  const timerStore = await import('../store/timerStore');
+  await timerStore.useTimerStore.getState().loadRunningTimers();
+
+  if (activityIndex < routine.items.length - 1) {
+    await scheduleRoutineStepTrigger(routine.id, activityIndex, expectedMinutes, session.id);
+  } else {
+    // Schedule a final stop for the last activity
+    await scheduleRoutineStepTrigger(routine.id, activityIndex, expectedMinutes, session.id);
+  }
+}
+
+async function handleRoutineStepEvent(
+  routineId: string,
+  nextIndex: number,
+  previousSessionId?: string
+): Promise<void> {
+  const routine = await getRoutineWithItems(routineId);
+  if (!routine || routine.items.length === 0) {
+    return;
+  }
+
+  const ordered = [...routine.items].sort((a, b) => a.displayOrder - b.displayOrder);
+  routine.items = ordered as any;
+
+  if (previousSessionId) {
+    await sessionRepository.stopSession(previousSessionId);
+  }
+
+  if (nextIndex >= ordered.length) {
+    const timerStore = await import('../store/timerStore');
+    await timerStore.useTimerStore.getState().loadRunningTimers();
+    await scheduleRoutineStartReminders();
+    return;
+  }
+
+  await startRoutineActivity(
+    { ...routine, items: ordered } as RoutineWithItems,
+    nextIndex
+  );
+}
+
+async function startRoutineAutomatically(routineId: string): Promise<void> {
+  const running = await sessionRepository.getRunningSession();
+  const routineRunning = running.some(s => s.source === 'routine');
+  if (routineRunning) {
+    return;
+  }
+
+  await clearRoutineStepNotifications();
+
+  const routine = await getRoutineWithItems(routineId);
+  if (!routine || routine.items.length === 0) {
+    return;
+  }
+
+  const ordered = [...routine.items].sort((a, b) => a.displayOrder - b.displayOrder);
+  await startRoutineActivity(
+    { ...routine, items: ordered } as RoutineWithItems,
+    0
+  );
+
+  try {
+    useRoutineExecutionStore.getState().markAutoStartedRoutine(routineId);
+  } catch (e) {
+    // ignore if store not available (e.g., background)
   }
 }
 
@@ -449,7 +654,26 @@ export function registerNotificationListeners(): void {
   listenersRegistered = true;
 
   const handler = async ({ type, detail }: { type: EventType; detail: any }) => {
-    if (detail.notification?.id !== INACTIVITY_NOTIFICATION_ID) {
+    const notificationId: string | undefined = detail.notification?.id;
+
+    if (notificationId?.startsWith(ROUTINE_NOTIFICATION_PREFIX) && type === EventType.DELIVERED) {
+      const routineId =
+        detail.notification?.data?.routineId ??
+        notificationId.replace(ROUTINE_NOTIFICATION_PREFIX, '');
+      await startRoutineAutomatically(routineId);
+      await scheduleRoutineStartReminders();
+      return;
+    }
+
+    if (notificationId?.startsWith(ROUTINE_STEP_PREFIX) && type === EventType.DELIVERED) {
+      const data = detail.notification?.data ?? {};
+      const nextIndex = Number(data.nextIndex ?? 0);
+      const routineId = data.routineId ?? notificationId.replace(ROUTINE_STEP_PREFIX, '').split('-')[0];
+      await handleRoutineStepEvent(routineId, nextIndex, data.previousSessionId);
+      return;
+    }
+
+    if (notificationId !== INACTIVITY_NOTIFICATION_ID) {
       return;
     }
 

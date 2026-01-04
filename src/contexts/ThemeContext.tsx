@@ -161,7 +161,7 @@ export const DarkTheme = {
   // Input colors
   inputBackground: '#1E293B',
   inputBorder: '#475569',
-  inputPlaceholder: '#64748B',
+  inputPlaceholder: '#CBD5E1',
 
   // Interactive states
   ripple: 'rgba(255, 255, 255, 0.1)',

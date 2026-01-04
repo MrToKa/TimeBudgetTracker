@@ -10,6 +10,8 @@ interface RoutineRow {
   id: string;
   name: string;
   routine_type: RoutineType;
+  start_time: string | null;
+  day_filter: 'all' | 'weekdays' | 'weekend' | null;
   is_active: number;
   created_at: string;
   updated_at: string;
@@ -31,6 +33,8 @@ function rowToRoutine(row: RoutineRow): Routine {
     id: row.id,
     name: row.name,
     routineType: row.routine_type,
+    startTime: row.start_time ?? null,
+    dayFilter: (row.day_filter as Routine['dayFilter']) ?? 'all',
     isActive: row.is_active === 1,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -128,6 +132,8 @@ export async function getRoutineWithItems(id: string): Promise<RoutineWithItems 
 interface CreateRoutineInput {
   name: string;
   routineType: RoutineType;
+  startTime?: string | null;
+  dayFilter?: Routine['dayFilter'];
 }
 
 export async function createRoutine(input: CreateRoutineInput): Promise<Routine> {
@@ -135,9 +141,9 @@ export async function createRoutine(input: CreateRoutineInput): Promise<Routine>
   const now = nowISO();
 
   await executeSql(
-    `INSERT INTO routines (id, name, routine_type, is_active, created_at, updated_at)
-     VALUES (?, ?, ?, 1, ?, ?)`,
-    [id, input.name, input.routineType, now, now]
+    `INSERT INTO routines (id, name, routine_type, start_time, day_filter, is_active, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, 1, ?, ?)`,
+    [id, input.name, input.routineType, input.startTime ?? null, input.dayFilter ?? 'all', now, now]
   );
 
   const routine = await getRoutineById(id);
@@ -167,6 +173,14 @@ export async function updateRoutine(
   if (updates.routineType !== undefined) {
     fields.push('routine_type = ?');
     values.push(updates.routineType);
+  }
+  if (updates.startTime !== undefined) {
+    fields.push('start_time = ?');
+    values.push(updates.startTime);
+  }
+  if (updates.dayFilter !== undefined) {
+    fields.push('day_filter = ?');
+    values.push(updates.dayFilter);
   }
   if (updates.isActive !== undefined) {
     fields.push('is_active = ?');
@@ -220,7 +234,7 @@ export interface RoutineSchedule {
   routineName: string;
   routineType: RoutineType;
   scheduledTime: string;
-  dayOfWeek: number | null;
+  dayFilter: Routine['dayFilter'];
 }
 
 export async function addRoutineItem(input: CreateRoutineItemInput): Promise<RoutineItem> {
@@ -329,26 +343,26 @@ export async function getRoutineSchedules(): Promise<RoutineSchedule[]> {
     routine_id: string;
     routine_name: string;
     routine_type: RoutineType;
-    scheduledTime: string;
-    dayOfWeek: number | null;
+    scheduledTime: string | null;
+    dayFilter: Routine['dayFilter'] | null;
   }>(
     `SELECT 
        r.id as routine_id,
        r.name as routine_name,
        r.routine_type,
-       ri.scheduled_time as scheduledTime,
-       ri.day_of_week as dayOfWeek
+       r.start_time as scheduledTime,
+       r.day_filter as dayFilter
      FROM routines r
-     JOIN routine_items ri ON ri.routine_id = r.id
      WHERE r.is_active = 1
-       AND ri.scheduled_time IS NOT NULL`
+       AND r.start_time IS NOT NULL
+       AND EXISTS (SELECT 1 FROM routine_items ri WHERE ri.routine_id = r.id)`
   );
 
   return rows.map(row => ({
     routineId: row.routine_id,
     routineName: row.routine_name,
     routineType: row.routine_type,
-    scheduledTime: row.scheduledTime,
-    dayOfWeek: row.dayOfWeek ?? null,
+    scheduledTime: row.scheduledTime ?? '',
+    dayFilter: row.dayFilter ?? 'all',
   }));
 }

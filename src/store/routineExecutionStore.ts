@@ -1,7 +1,7 @@
 // Routine Execution Store - Zustand state management for running routines
 
 import { create } from 'zustand';
-import { nowISO, calculateDurationMinutes } from '../utils/dateUtils';
+import { nowISO, calculateDurationMinutes, calculateDurationSeconds } from '../utils/dateUtils';
 import * as sessionRepository from '../database/repositories/sessionRepository';
 import { getRoutineWithItems } from '../database/repositories/routineRepository';
 import {
@@ -9,6 +9,8 @@ import {
   cancelTimerNotifications,
   showTimerStartNotification,
 } from '../services/notificationService';
+import { useTimerStore } from './timerStore';
+import { useTimerEvents } from './timerEvents';
 
 interface RoutineActivity {
   id: string;
@@ -34,6 +36,8 @@ interface RunningRoutine {
   isPaused: boolean;
   pausedAt: string | null;
   totalPausedDuration: number; // in seconds
+  completedDurationSeconds: number; // accumulated time for finished activities
+  activityDurations: Record<string, number>; // cumulative time per activityId across occurrences (seconds)
 }
 
 interface RoutineExecutionState {
@@ -41,6 +45,7 @@ interface RoutineExecutionState {
   runningRoutine: RunningRoutine | null;
   isLoading: boolean;
   error: string | null;
+  lastAutoStartedRoutineId: string | null;
 
   // Actions
   startRoutine: (routineId: string) => Promise<void>;
@@ -51,12 +56,15 @@ interface RoutineExecutionState {
   getCurrentActivityDuration: () => number;
   getTotalRoutineDuration: () => number;
   clearError: () => void;
+  hydrateRunningRoutine: () => Promise<void>;
+  markAutoStartedRoutine: (id: string | null) => void;
 }
 
 export const useRoutineExecutionStore = create<RoutineExecutionState>((set, get) => ({
   runningRoutine: null,
   isLoading: false,
   error: null,
+  lastAutoStartedRoutineId: null,
 
   startRoutine: async (routineId: string) => {
     set({ isLoading: true, error: null });
@@ -108,6 +116,7 @@ export const useRoutineExecutionStore = create<RoutineExecutionState>((set, get)
         activityNameSnapshot: firstActivity.activityName,
         categoryId: firstActivity.categoryId,
         categoryNameSnapshot: firstActivity.categoryName,
+        routineId: routine.id,
         startTime: now,
         isPlanned: true,
         expectedDurationMinutes: firstActivity.expectedMinutes,
@@ -120,7 +129,7 @@ export const useRoutineExecutionStore = create<RoutineExecutionState>((set, get)
       firstActivity.sessionId = session.id;
 
       // Schedule notifications for first activity
-      if (firstActivity.expectedMinutes && firstActivity.expectedMinutes > 5) {
+      if (firstActivity.expectedMinutes && firstActivity.expectedMinutes > 0) {
         const startDate = new Date(now);
         await scheduleTimerWarning(
           session.id,
@@ -132,6 +141,7 @@ export const useRoutineExecutionStore = create<RoutineExecutionState>((set, get)
 
       // Show start notification
       await showTimerStartNotification(firstActivity.activityName);
+      await useTimerStore.getState().loadRunningTimers();
 
       set({
         runningRoutine: {
@@ -144,8 +154,11 @@ export const useRoutineExecutionStore = create<RoutineExecutionState>((set, get)
           isPaused: false,
           pausedAt: null,
           totalPausedDuration: 0,
+          completedDurationSeconds: 0,
+          activityDurations: {},
         },
         isLoading: false,
+        lastAutoStartedRoutineId: get().lastAutoStartedRoutineId,
       });
     } catch (error) {
       console.error('Error starting routine:', error);
@@ -224,14 +237,19 @@ export const useRoutineExecutionStore = create<RoutineExecutionState>((set, get)
 
     const currentActivity = runningRoutine.activities[runningRoutine.currentActivityIndex];
     const now = nowISO();
+    const activityKey = currentActivity.activityId || currentActivity.activityName;
+    let elapsedSeconds = 0;
 
     // End current activity
     if (currentActivity.sessionId && currentActivity.startTime) {
       await sessionRepository.stopSession(currentActivity.sessionId);
-      currentActivity.endTime = now;
+      elapsedSeconds = calculateDurationSeconds(currentActivity.startTime, now);
       // Cancel current notifications
       cancelTimerNotifications(currentActivity.sessionId);
     }
+
+    const updatedActivityDurations = { ...runningRoutine.activityDurations };
+    updatedActivityDurations[activityKey] = (updatedActivityDurations[activityKey] ?? 0) + elapsedSeconds;
 
     // Check if there's a next activity
     const nextIndex = runningRoutine.currentActivityIndex + 1;
@@ -249,6 +267,7 @@ export const useRoutineExecutionStore = create<RoutineExecutionState>((set, get)
       activityNameSnapshot: nextActivity.activityName,
       categoryId: nextActivity.categoryId,
       categoryNameSnapshot: nextActivity.categoryName,
+      routineId: runningRoutine.routineId,
       startTime: now,
       isPlanned: true,
       expectedDurationMinutes: nextActivity.expectedMinutes,
@@ -257,11 +276,18 @@ export const useRoutineExecutionStore = create<RoutineExecutionState>((set, get)
       idlePromptEnabled: false,
     });
 
-    nextActivity.startTime = now;
-    nextActivity.sessionId = session.id;
+    const updatedActivities = runningRoutine.activities.map((activity, idx) => {
+      if (idx === runningRoutine.currentActivityIndex) {
+        return { ...activity, endTime: now };
+      }
+      if (idx === nextIndex) {
+        return { ...activity, startTime: now, sessionId: session.id };
+      }
+      return activity;
+    });
 
     // Schedule notifications for next activity
-    if (nextActivity.expectedMinutes && nextActivity.expectedMinutes > 5) {
+    if (nextActivity.expectedMinutes && nextActivity.expectedMinutes > 0) {
       const startDate = new Date(now);
       await scheduleTimerWarning(
         session.id,
@@ -273,11 +299,15 @@ export const useRoutineExecutionStore = create<RoutineExecutionState>((set, get)
 
     // Show start notification
     await showTimerStartNotification(nextActivity.activityName);
+    await useTimerStore.getState().loadRunningTimers();
 
     set({
       runningRoutine: {
         ...runningRoutine,
+        activities: updatedActivities,
         currentActivityIndex: nextIndex,
+        completedDurationSeconds: runningRoutine.completedDurationSeconds + elapsedSeconds,
+        activityDurations: updatedActivityDurations,
       },
     });
   },
@@ -300,7 +330,8 @@ export const useRoutineExecutionStore = create<RoutineExecutionState>((set, get)
       cancelTimerNotifications(currentActivity.sessionId);
     }
 
-    set({ runningRoutine: null });
+    set({ runningRoutine: null, lastAutoStartedRoutineId: null });
+    await useTimerStore.getState().loadRunningTimers();
   },
 
   getCurrentActivityDuration: () => {
@@ -311,18 +342,19 @@ export const useRoutineExecutionStore = create<RoutineExecutionState>((set, get)
     }
 
     const currentActivity = runningRoutine.activities[runningRoutine.currentActivityIndex];
+    const activityKey = currentActivity.activityId || currentActivity.activityName;
+    const baseSeconds = runningRoutine.activityDurations[activityKey] ?? 0;
     
     if (!currentActivity.startTime) {
-      return 0;
+      return baseSeconds;
     }
 
-    const now = nowISO();
-    const startTime = currentActivity.startTime;
     const endTime = runningRoutine.isPaused && runningRoutine.pausedAt 
       ? runningRoutine.pausedAt 
-      : now;
+      : nowISO();
 
-    return calculateDurationMinutes(startTime, endTime) * 60; // Return in seconds
+    const currentSeconds = calculateDurationSeconds(currentActivity.startTime, endTime);
+    return baseSeconds + currentSeconds;
   },
 
   getTotalRoutineDuration: () => {
@@ -332,11 +364,114 @@ export const useRoutineExecutionStore = create<RoutineExecutionState>((set, get)
       return 0;
     }
 
-    const now = nowISO();
-    const totalDuration = calculateDurationMinutes(runningRoutine.startTime, now) * 60; // in seconds
+    const currentActivity = runningRoutine.activities[runningRoutine.currentActivityIndex];
+    const endTime = runningRoutine.isPaused && runningRoutine.pausedAt 
+      ? runningRoutine.pausedAt 
+      : nowISO();
+
+    const currentSeconds = currentActivity.startTime
+      ? calculateDurationSeconds(currentActivity.startTime, endTime)
+      : 0;
     
-    return totalDuration - runningRoutine.totalPausedDuration;
+    return runningRoutine.completedDurationSeconds + currentSeconds;
   },
 
   clearError: () => set({ error: null }),
+
+  hydrateRunningRoutine: async () => {
+    try {
+      const runningSessions = await sessionRepository.getRunningSession();
+      const routineSession = runningSessions.find(s => s.source === 'routine' && s.routineId);
+      if (!routineSession || !routineSession.routineId) {
+        set({ runningRoutine: null });
+        return;
+      }
+
+      const routine = await getRoutineWithItems(routineSession.routineId);
+      if (!routine || !routine.items.length) {
+        set({ runningRoutine: null });
+        return;
+      }
+
+      // Get all sessions for this routine to find the earliest start time
+      const db = await import('../database');
+      const allRoutineSessions = await db.executeQuery<{
+        start_time: string;
+        end_time: string | null;
+        actual_duration_minutes: number | null;
+        activity_id: string | null;
+        activity_name_snapshot: string;
+        is_running: number;
+      }>(
+        `SELECT start_time, end_time, actual_duration_minutes, activity_id, activity_name_snapshot, is_running 
+         FROM time_sessions 
+         WHERE routine_id = ? 
+         ORDER BY start_time ASC`,
+        [routineSession.routineId]
+      );
+      const routineStartTime = allRoutineSessions.length > 0 ? allRoutineSessions[0].start_time : routineSession.startTime;
+      const activityDurations: Record<string, number> = {};
+      let completedDurationSeconds = 0;
+
+      for (const session of allRoutineSessions) {
+        if (session.is_running === 1) {
+          continue;
+        }
+        const durationSeconds = session.actual_duration_minutes !== null
+          ? session.actual_duration_minutes * 60
+          : session.end_time
+            ? calculateDurationSeconds(session.start_time, session.end_time)
+            : 0;
+        completedDurationSeconds += durationSeconds;
+        const key = session.activity_id ?? session.activity_name_snapshot;
+        activityDurations[key] = (activityDurations[key] ?? 0) + durationSeconds;
+      }
+
+      const ordered = [...routine.items].sort((a, b) => a.displayOrder - b.displayOrder);
+      const currentIndex = ordered.findIndex(item => item.activityId === routineSession.activityId);
+      const activities: RoutineActivity[] = [];
+      for (let idx = 0; idx < ordered.length; idx++) {
+        const item = ordered[idx];
+        const catRows = await db.executeQuery<{ id: string; name: string; color: string }>(
+          'SELECT id, name, color FROM categories WHERE id = ?',
+          [item.activity.categoryId]
+        );
+        const category = catRows[0];
+        activities.push({
+          id: item.id,
+          activityId: item.activityId,
+          activityName: item.activity.name,
+          categoryId: item.activity.categoryId,
+          categoryName: category?.name ?? item.activity.name,
+          categoryColor: category?.color ?? '#6B7280',
+          expectedMinutes: item.activity.defaultExpectedMinutes,
+          scheduledTime: item.scheduledTime,
+          startTime: idx === currentIndex ? routineSession.startTime : null,
+          endTime: null,
+          sessionId: idx === currentIndex ? routineSession.id : null,
+        });
+      }
+
+      set({
+        runningRoutine: {
+          routineId: routine.id,
+          routineName: routine.name,
+          routineType: routine.routineType,
+          activities,
+          currentActivityIndex: currentIndex >= 0 ? currentIndex : 0,
+          startTime: routineStartTime,
+          isPaused: false,
+          pausedAt: null,
+          totalPausedDuration: 0,
+          completedDurationSeconds,
+          activityDurations,
+        },
+        lastAutoStartedRoutineId: routine.id,
+      });
+    } catch (err) {
+      console.warn('Failed to hydrate running routine', err);
+    }
+  },
+
+  markAutoStartedRoutine: (id: string | null) => set({ lastAutoStartedRoutineId: id }),
 }));

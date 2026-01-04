@@ -72,6 +72,9 @@ async function initializeDatabase(db: SQLiteDatabase): Promise<void> {
       await db.executeSql(statement);
     }
 
+    await ensureRoutineSchemaUpToDate(db);
+    await ensureSessionSchemaUpToDate(db);
+
     // Check if we need to seed default data
     const [categoriesResult] = await db.executeSql(
       'SELECT COUNT(*) as count FROM categories'
@@ -121,6 +124,44 @@ async function seedDefaultData(db: SQLiteDatabase): Promise<void> {
   }
 
   console.log('Default data seeded successfully');
+}
+
+async function ensureRoutineSchemaUpToDate(db: SQLiteDatabase): Promise<void> {
+  try {
+    const [info] = await db.executeSql(`PRAGMA table_info(routines);`);
+    const columns = [];
+    for (let i = 0; i < info.rows.length; i++) {
+      columns.push(info.rows.item(i).name as string);
+    }
+
+    if (!columns.includes('start_time')) {
+      await db.executeSql(`ALTER TABLE routines ADD COLUMN start_time TEXT;`);
+    }
+
+    if (!columns.includes('day_filter')) {
+      await db.executeSql(
+        `ALTER TABLE routines ADD COLUMN day_filter TEXT DEFAULT 'all';`
+      );
+    }
+  } catch (error) {
+    console.warn('Failed to ensure routine schema is up to date:', error);
+  }
+}
+
+async function ensureSessionSchemaUpToDate(db: SQLiteDatabase): Promise<void> {
+  try {
+    const [info] = await db.executeSql(`PRAGMA table_info(time_sessions);`);
+    const columns = [];
+    for (let i = 0; i < info.rows.length; i++) {
+      columns.push(info.rows.item(i).name as string);
+    }
+
+    if (!columns.includes('routine_id')) {
+      await db.executeSql(`ALTER TABLE time_sessions ADD COLUMN routine_id TEXT;`);
+    }
+  } catch (error) {
+    console.warn('Failed to ensure session schema is up to date:', error);
+  }
 }
 
 // ============================================

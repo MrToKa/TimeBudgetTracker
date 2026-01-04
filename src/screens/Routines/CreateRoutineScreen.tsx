@@ -39,6 +39,8 @@ export default function CreateRoutineScreen() {
   const styles = useMemo(() => createStyles(theme), [theme]);
   const [name, setName] = useState('');
   const [routineType, setRoutineType] = useState<RoutineType>('daily');
+  const [startTime, setStartTime] = useState('');
+  const [dayFilter, setDayFilter] = useState<'all' | 'weekdays' | 'weekend'>('all');
   const [saving, setSaving] = useState(false);
 
   const handleSave = async () => {
@@ -47,11 +49,18 @@ export default function CreateRoutineScreen() {
       return;
     }
 
+    if (!/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/.test(startTime)) {
+      Alert.alert('Invalid Start Time', 'Please enter the routine start time in HH:MM (24h) format.');
+      return;
+    }
+
     setSaving(true);
     try {
       await createRoutine({
         name: name.trim(),
         routineType,
+        startTime,
+        dayFilter,
       });
       
       Alert.alert(
@@ -87,6 +96,7 @@ export default function CreateRoutineScreen() {
       <TextInput
         style={styles.input}
         placeholder="e.g., Morning Routine, Workday, Weekend"
+        placeholderTextColor={theme.inputPlaceholder}
         value={name}
         onChangeText={setName}
         autoFocus
@@ -124,6 +134,49 @@ export default function CreateRoutineScreen() {
               {item.label}
             </Text>
             <Text style={styles.typeDescription}>{item.description}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
+      <Text style={styles.label}>Start Time</Text>
+      <TextInput
+        style={styles.input}
+        placeholder="HH:MM (24h)"
+        placeholderTextColor={theme.inputPlaceholder}
+        value={startTime}
+        onChangeText={setStartTime}
+        keyboardType="numbers-and-punctuation"
+      />
+      <Text style={styles.helperText}>Routine will auto-start at this time on eligible days.</Text>
+
+      <Text style={styles.label}>Days</Text>
+      <View style={styles.typeContainer}>
+        {[
+          { key: 'all', label: 'All Days', icon: 'calendar-range' },
+          { key: 'weekdays', label: 'Weekdays', icon: 'briefcase' },
+          { key: 'weekend', label: 'Weekend', icon: 'beach' },
+        ].map(option => (
+          <TouchableOpacity
+            key={option.key}
+            style={[
+              styles.dayCard,
+              dayFilter === option.key && styles.dayCardSelected,
+            ]}
+            onPress={() => setDayFilter(option.key as typeof dayFilter)}
+          >
+            <Icon
+              name={option.icon}
+              size={20}
+              color={dayFilter === option.key ? theme.secondary : theme.textSecondary}
+            />
+            <Text
+              style={[
+                styles.dayLabel,
+                dayFilter === option.key && styles.dayLabelSelected,
+              ]}
+            >
+              {option.label}
+            </Text>
           </TouchableOpacity>
         ))}
       </View>
@@ -183,6 +236,11 @@ const createStyles = (theme: ReturnType<typeof useTheme>['theme']) => StyleSheet
     fontSize: 16,
     color: theme.textPrimary,
   },
+  helperText: {
+    fontSize: 12,
+    color: theme.textSecondary,
+    marginTop: 4,
+  },
   typeContainer: {
     flexDirection: 'row',
     gap: 12,
@@ -225,6 +283,30 @@ const createStyles = (theme: ReturnType<typeof useTheme>['theme']) => StyleSheet
     fontSize: 12,
     color: theme.textSecondary,
     textAlign: 'center',
+  },
+  dayCard: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    padding: 12,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: theme.border,
+    backgroundColor: theme.surface,
+  },
+  dayCardSelected: {
+    borderColor: theme.secondary,
+    backgroundColor: theme.secondary + '08',
+  },
+  dayLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: theme.textPrimary,
+  },
+  dayLabelSelected: {
+    color: theme.secondary,
   },
   infoBox: {
     flexDirection: 'row',

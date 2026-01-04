@@ -78,6 +78,7 @@ export interface TimeSession {
   activityNameSnapshot: string;
   categoryId: string | null;
   categoryNameSnapshot: string;
+  routineId?: string | null;
   startTime: string;
   endTime: string | null;
   actualDurationMinutes: number | null;
@@ -95,6 +96,7 @@ export interface CreateSessionInput {
   activityNameSnapshot: string;
   categoryId?: string | null;
   categoryNameSnapshot: string;
+  routineId?: string | null;
   startTime: string;
   endTime?: string | null;
   actualDurationMinutes?: number | null;
@@ -110,6 +112,7 @@ export interface UpdateSessionInput {
   activityNameSnapshot?: string;
   categoryId?: string | null;
   categoryNameSnapshot?: string;
+  routineId?: string | null;
   startTime?: string;
   endTime?: string | null;
   actualDurationMinutes?: number | null;
@@ -171,6 +174,8 @@ export interface Routine {
   id: string;
   name: string;
   routineType: RoutineType;
+  startTime: string | null;
+  dayFilter: 'all' | 'weekdays' | 'weekend';
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
@@ -201,6 +206,7 @@ export interface RunningTimer {
   categoryId: string | null;
   categoryName: string;
   categoryColor: string;
+  routineId?: string | null;
   startTime: Date;
   expectedDurationMinutes: number | null;
   isPlanned: boolean;

@@ -12,6 +12,7 @@ interface SessionRow {
   activity_name_snapshot: string;
   category_id: string | null;
   category_name_snapshot: string;
+  routine_id: string | null;
   start_time: string;
   end_time: string | null;
   actual_duration_minutes: number | null;
@@ -37,6 +38,7 @@ function rowToSession(row: SessionRow): TimeSession {
     activityNameSnapshot: row.activity_name_snapshot,
     categoryId: row.category_id,
     categoryNameSnapshot: row.category_name_snapshot,
+    routineId: row.routine_id ?? null,
     startTime: row.start_time,
     endTime: row.end_time,
     actualDurationMinutes: row.actual_duration_minutes,
@@ -75,14 +77,15 @@ export async function createSession(input: CreateSessionInput): Promise<TimeSess
   const now = nowISO();
   
   await executeSql(
-    `INSERT INTO time_sessions (id, activity_id, activity_name_snapshot, category_id, category_name_snapshot, start_time, end_time, actual_duration_minutes, expected_duration_minutes, is_planned, source, is_running, idle_prompt_enabled, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO time_sessions (id, activity_id, activity_name_snapshot, category_id, category_name_snapshot, routine_id, start_time, end_time, actual_duration_minutes, expected_duration_minutes, is_planned, source, is_running, idle_prompt_enabled, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       id,
       input.activityId ?? null,
       input.activityNameSnapshot,
       input.categoryId ?? null,
       input.categoryNameSnapshot,
+      input.routineId ?? null,
       input.startTime,
       input.endTime ?? null,
       input.actualDurationMinutes ?? null,
@@ -131,6 +134,10 @@ export async function updateSession(
   if (updates.categoryNameSnapshot !== undefined) {
     fields.push('category_name_snapshot = ?');
     values.push(updates.categoryNameSnapshot);
+  }
+  if (updates.routineId !== undefined) {
+    fields.push('routine_id = ?');
+    values.push(updates.routineId);
   }
   if (updates.startTime !== undefined) {
     fields.push('start_time = ?');
