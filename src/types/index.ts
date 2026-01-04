@@ -298,6 +298,8 @@ export interface AppSettings {
   reminderReviewMode: boolean;
   reminderLongSession: boolean;
   longSessionThresholdMinutes: number;
+  noTimerReminderEnabled: boolean;
+  noTimerReminderMinutes: number;
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -311,6 +313,8 @@ export const DEFAULT_SETTINGS: AppSettings = {
   reminderReviewMode: true,
   reminderLongSession: true,
   longSessionThresholdMinutes: 120,
+  noTimerReminderEnabled: true,
+  noTimerReminderMinutes: 5,
 };
 
 // ============================================

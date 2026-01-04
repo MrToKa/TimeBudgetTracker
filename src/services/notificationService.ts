@@ -138,33 +138,44 @@ export async function showTimerStartNotification(activityName: string): Promise<
 // Inactivity Notifications
 // ============================================
 
-let inactivityTimeoutId: ReturnType<typeof setTimeout> | null = null;
-const INACTIVITY_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
+let inactivityIntervalId: ReturnType<typeof setInterval> | null = null;
+let inactivityTimeoutMs = 5 * 60 * 1000; // Default 5 minutes, can be configured
 
-export function startInactivityMonitor(hasRunningTimers: boolean): void {
-  // Clear any existing timeout
+export function setInactivityTimeout(minutes: number): void {
+  inactivityTimeoutMs = minutes * 60 * 1000;
+}
+
+export function startInactivityMonitor(hasRunningTimers: boolean, intervalMinutes?: number): void {
+  // Clear any existing interval
   stopInactivityMonitor();
+
+  // Update timeout if provided
+  if (intervalMinutes !== undefined && intervalMinutes > 0) {
+    inactivityTimeoutMs = intervalMinutes * 60 * 1000;
+  }
 
   // Only start monitoring if no timers are running
   if (!hasRunningTimers) {
-    inactivityTimeoutId = setTimeout(async () => {
+    // Show first notification after the configured interval
+    inactivityIntervalId = setInterval(async () => {
       await showInactivityNotification();
-    }, INACTIVITY_TIMEOUT_MS);
+    }, inactivityTimeoutMs);
   }
 }
 
 export function stopInactivityMonitor(): void {
-  if (inactivityTimeoutId) {
-    clearTimeout(inactivityTimeoutId);
-    inactivityTimeoutId = null;
+  if (inactivityIntervalId) {
+    clearInterval(inactivityIntervalId);
+    inactivityIntervalId = null;
   }
 }
 
 export async function showInactivityNotification(): Promise<void> {
+  const minutes = Math.round(inactivityTimeoutMs / 60000);
   await notifee.displayNotification({
     id: 'inactivity-reminder',
     title: '💤 No timer running',
-    body: 'You haven\'t tracked any activity for 5 minutes. Start a timer?',
+    body: `You haven't tracked any activity. Start a timer?`,
     android: {
       channelId: INACTIVITY_CHANNEL_ID,
       importance: AndroidImportance.DEFAULT,

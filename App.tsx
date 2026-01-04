@@ -6,7 +6,7 @@
  */
 
 import 'react-native-gesture-handler';
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { StatusBar } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
@@ -16,12 +16,16 @@ import {
   setupNotificationChannels,
   requestNotificationPermissions,
   startInactivityMonitor,
+  stopInactivityMonitor,
 } from './src/services/notificationService';
 import { useTimerStore } from './src/store/timerStore';
+import { getSetting } from './src/database/repositories/settingsRepository';
 
 function AppContent() {
   const { theme } = useTheme();
   const { loadRunningTimers, runningTimers } = useTimerStore();
+  const [noTimerReminderEnabled, setNoTimerReminderEnabled] = useState(true);
+  const [noTimerReminderMinutes, setNoTimerReminderMinutes] = useState(5);
 
   useEffect(() => {
     // Initialize app
@@ -34,17 +38,34 @@ function AppContent() {
       
       // Load running timers
       await loadRunningTimers();
+      
+      // Load no timer reminder settings
+      try {
+        const enabledSetting = await getSetting('noTimerReminderEnabled');
+        const minutesSetting = await getSetting('noTimerReminderMinutes');
+        
+        if (enabledSetting !== null) {
+          setNoTimerReminderEnabled(enabledSetting === 'true' || enabledSetting === '1');
+        }
+        if (minutesSetting !== null) {
+          setNoTimerReminderMinutes(parseInt(minutesSetting, 10) || 5);
+        }
+      } catch (error) {
+        console.error('Error loading notification settings:', error);
+      }
     };
     
     initialize();
   }, [loadRunningTimers]);
 
-  // Start inactivity monitor when no timers are running
+  // Start/stop inactivity monitor based on timers and settings
   useEffect(() => {
-    if (runningTimers.length === 0) {
-      startInactivityMonitor(false);
+    if (runningTimers.length === 0 && noTimerReminderEnabled) {
+      startInactivityMonitor(false, noTimerReminderMinutes);
+    } else {
+      stopInactivityMonitor();
     }
-  }, [runningTimers.length]);
+  }, [runningTimers.length, noTimerReminderEnabled, noTimerReminderMinutes]);
 
   return (
     <SafeAreaProvider>

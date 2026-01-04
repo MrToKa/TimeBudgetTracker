@@ -4,6 +4,7 @@ import React from 'react';
 import { NavigationContainer, DefaultTheme, DarkTheme } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
 import { RootStackParamList, MainTabParamList } from '../types';
@@ -35,6 +36,7 @@ const Tab = createBottomTabNavigator<MainTabParamList>();
 // Tab Navigator
 function MainTabs() {
   const { theme } = useTheme();
+  const insets = useSafeAreaInsets();
 
   return (
     <Tab.Navigator
@@ -64,9 +66,9 @@ function MainTabs() {
         tabBarStyle: {
           backgroundColor: theme.tabBarBackground,
           borderTopColor: theme.tabBarBorder,
-          paddingBottom: 4,
+          paddingBottom: Math.max(insets.bottom, 4),
           paddingTop: 4,
-          height: 60,
+          height: 60 + insets.bottom,
         },
         tabBarLabelStyle: {
           fontSize: 12,

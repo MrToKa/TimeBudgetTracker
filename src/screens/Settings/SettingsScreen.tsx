@@ -53,6 +53,20 @@ const SETTINGS_CONFIG: { section: string; items: SettingItem[] }[] = [
         type: 'switch',
       },
       {
+        key: 'noTimerReminderEnabled',
+        title: 'No Timer Reminder',
+        subtitle: 'Remind when no timer is running',
+        icon: 'timer-off',
+        type: 'switch',
+      },
+      {
+        key: 'noTimerReminderMinutes',
+        title: 'Reminder Interval',
+        subtitle: 'Minutes between no timer reminders',
+        icon: 'clock-outline',
+        type: 'number',
+      },
+      {
         key: 'reminderRoutineStart',
         title: 'Routine Reminders',
         subtitle: 'Remind when scheduled routines start',
@@ -143,16 +157,22 @@ export default function SettingsScreen() {
 
   const handleNumberSetting = (key: keyof AppSettings, currentValue: number) => {
     // For Android, we'll use a simple Alert with preset options
-    const options = key === 'idleThresholdMinutes' 
-      ? [5, 10, 15, 30, 60]
-      : [30, 60, 90, 120, 180];
+    let options: number[];
+    
+    if (key === 'idleThresholdMinutes') {
+      options = [5, 10, 15, 30, 60];
+    } else if (key === 'noTimerReminderMinutes') {
+      options = [1, 2, 5, 10, 15, 30, 60];
+    } else {
+      options = [30, 60, 90, 120, 180];
+    }
     
     Alert.alert(
       'Select Value',
       'Choose the number of minutes:',
       [
         ...options.map(mins => ({
-          text: `${mins} minutes`,
+          text: `${mins} minute${mins > 1 ? 's' : ''}`,
           onPress: () => updateSetting(key, mins),
         })),
         { text: 'Cancel', style: 'cancel' as const },

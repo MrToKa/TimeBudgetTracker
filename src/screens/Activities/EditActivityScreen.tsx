@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { View, Text, StyleSheet, TextInput, Switch, Alert } from 'react-native';
+import { View, Text, StyleSheet, TextInput, Switch, Alert, ScrollView } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 
 import { RootStackParamList, Category } from '../../types';
@@ -13,6 +14,7 @@ export default function EditActivityScreen() {
   const route = useRoute<RouteProp<RootStackParamList, 'EditActivity'>>();
   const { activities, loadActivities, createActivity, updateActivity, deleteActivity, categories, loadCategories } = useActivityStore();
   const { theme } = useTheme();
+  const insets = useSafeAreaInsets();
   const styles = useMemo(() => createStyles(theme), [theme]);
 
   const [name, setName] = useState('');
@@ -111,7 +113,7 @@ export default function EditActivityScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: Math.max(insets.bottom, 16) + 16 }}>
       <Text style={styles.title}>{route.params?.activityId ? 'Edit Activity' : 'New Activity'}</Text>
 
       <Text style={styles.label}>Category</Text>
@@ -159,7 +161,7 @@ export default function EditActivityScreen() {
           style={styles.deleteButton}
         />
       ) : null}
-    </View>
+    </ScrollView>
   );
 }
 
