@@ -1,22 +1,27 @@
 // Notification Service - Timer warnings and inactivity alerts
 
 import notifee, {
+  AlarmType,
   AndroidImportance,
+  AndroidStyle,
+  EventType,
   TimestampTrigger,
   TriggerType,
-  AndroidStyle,
 } from '@notifee/react-native';
+import { getSettingBoolean, getSettingNumber } from '../database/repositories/settingsRepository';
+import { getRunningSession } from '../database/repositories/sessionRepository';
 
 // Channel IDs
 const TIMER_CHANNEL_ID = 'timer-notifications';
 const INACTIVITY_CHANNEL_ID = 'inactivity-notifications';
+const INACTIVITY_NOTIFICATION_ID = 'inactivity-reminder';
+const DEFAULT_INACTIVITY_MINUTES = 5;
 
 // ============================================
 // Setup
 // ============================================
 
 export async function setupNotificationChannels(): Promise<void> {
-  // Timer notifications channel
   await notifee.createChannel({
     id: TIMER_CHANNEL_ID,
     name: 'Timer Notifications',
@@ -26,7 +31,6 @@ export async function setupNotificationChannels(): Promise<void> {
     vibration: true,
   });
 
-  // Inactivity notifications channel
   await notifee.createChannel({
     id: INACTIVITY_CHANNEL_ID,
     name: 'Inactivity Notifications',
@@ -50,7 +54,6 @@ export async function scheduleTimerWarning(
   const endTime = new Date(startTime.getTime() + expectedMinutes * 60 * 1000);
   const now = Date.now();
 
-  // 5 minutes before warning
   const fiveMinBefore = endTime.getTime() - 5 * 60 * 1000;
   if (fiveMinBefore > now) {
     const fiveMinTrigger: TimestampTrigger = {
@@ -62,7 +65,7 @@ export async function scheduleTimerWarning(
     await notifee.createTriggerNotification(
       {
         id: fiveMinId,
-        title: '⏰ 5 minutes remaining',
+        title: '5 minutes remaining',
         body: `"${activityName}" budget ends in 5 minutes`,
         android: {
           channelId: TIMER_CHANNEL_ID,
@@ -79,7 +82,6 @@ export async function scheduleTimerWarning(
     notificationIds.push(fiveMinId);
   }
 
-  // Time's up notification
   const timeUpTime = endTime.getTime();
   if (timeUpTime > now) {
     const timeUpTrigger: TimestampTrigger = {
@@ -91,7 +93,7 @@ export async function scheduleTimerWarning(
     await notifee.createTriggerNotification(
       {
         id: timeUpId,
-        title: '🔴 Time is up!',
+        title: 'Time is up!',
         body: `"${activityName}" has exceeded its budget`,
         android: {
           channelId: TIMER_CHANNEL_ID,
@@ -122,7 +124,7 @@ export async function cancelTimerNotifications(sessionId: string): Promise<void>
 
 export async function showTimerStartNotification(activityName: string): Promise<void> {
   await notifee.displayNotification({
-    title: '▶️ Timer Started',
+    title: 'Timer Started',
     body: `Tracking "${activityName}"`,
     android: {
       channelId: TIMER_CHANNEL_ID,
@@ -138,58 +140,125 @@ export async function showTimerStartNotification(activityName: string): Promise<
 // Inactivity Notifications
 // ============================================
 
-let inactivityIntervalId: ReturnType<typeof setInterval> | null = null;
-let inactivityTimeoutMs = 5 * 60 * 1000; // Default 5 minutes, can be configured
+let inactivityTimeoutMs = DEFAULT_INACTIVITY_MINUTES * 60 * 1000;
+let listenersRegistered = false;
+
+const reminderNotification = {
+  id: INACTIVITY_NOTIFICATION_ID,
+  title: 'No timer running',
+  body: "You haven't tracked any activity. Start a timer?",
+  android: {
+    channelId: INACTIVITY_CHANNEL_ID,
+    importance: AndroidImportance.DEFAULT,
+    pressAction: { id: 'default' },
+  },
+};
+
+async function shouldScheduleInactivityReminder(intervalMinutes?: number): Promise<number | null> {
+  const notificationsEnabled = await getSettingBoolean('notificationsEnabled', true);
+  const reminderEnabled = await getSettingBoolean('noTimerReminderEnabled', true);
+  if (!notificationsEnabled || !reminderEnabled) {
+    return null;
+  }
+
+  const runningSessions = await getRunningSession();
+  if (runningSessions.length > 0) {
+    return null;
+  }
+
+  const minutes =
+    intervalMinutes ??
+    (await getSettingNumber('noTimerReminderMinutes', DEFAULT_INACTIVITY_MINUTES));
+
+  if (!minutes || minutes <= 0) {
+    return null;
+  }
+
+  inactivityTimeoutMs = minutes * 60 * 1000;
+  return minutes;
+}
+
+async function scheduleInactivityReminder(intervalMinutes?: number): Promise<void> {
+  const minutes = await shouldScheduleInactivityReminder(intervalMinutes);
+  if (!minutes) {
+    return;
+  }
+
+  const trigger: TimestampTrigger = {
+    type: TriggerType.TIMESTAMP,
+    timestamp: Date.now() + minutes * 60 * 1000,
+    alarmManager: { type: AlarmType.SET_EXACT_AND_ALLOW_WHILE_IDLE },
+  };
+
+  await notifee.cancelTriggerNotification(INACTIVITY_NOTIFICATION_ID);
+  await notifee.createTriggerNotification(reminderNotification, trigger);
+}
 
 export function setInactivityTimeout(minutes: number): void {
   inactivityTimeoutMs = minutes * 60 * 1000;
 }
 
 export function startInactivityMonitor(hasRunningTimers: boolean, intervalMinutes?: number): void {
-  // Clear any existing interval
   stopInactivityMonitor();
 
-  // Update timeout if provided
-  if (intervalMinutes !== undefined && intervalMinutes > 0) {
-    inactivityTimeoutMs = intervalMinutes * 60 * 1000;
-  }
-
-  // Only start monitoring if no timers are running
   if (!hasRunningTimers) {
-    // Show first notification after the configured interval
-    inactivityIntervalId = setInterval(async () => {
-      await showInactivityNotification();
-    }, inactivityTimeoutMs);
+    scheduleInactivityReminder(intervalMinutes).catch(error =>
+      console.warn('Error scheduling inactivity reminder:', error)
+    );
   }
 }
 
 export function stopInactivityMonitor(): void {
-  if (inactivityIntervalId) {
-    clearInterval(inactivityIntervalId);
-    inactivityIntervalId = null;
-  }
+  notifee
+    .cancelTriggerNotification(INACTIVITY_NOTIFICATION_ID)
+    .catch(error => console.warn('Error canceling scheduled inactivity reminder:', error));
 }
 
 export async function showInactivityNotification(): Promise<void> {
   const minutes = Math.round(inactivityTimeoutMs / 60000);
   await notifee.displayNotification({
-    id: 'inactivity-reminder',
-    title: '💤 No timer running',
-    body: `You haven't tracked any activity. Start a timer?`,
-    android: {
-      channelId: INACTIVITY_CHANNEL_ID,
-      importance: AndroidImportance.DEFAULT,
-      pressAction: { id: 'default' },
-    },
+    ...reminderNotification,
+    body: `You haven't tracked any activity in the last ${minutes} minute${minutes === 1 ? '' : 's'}. Start a timer?`,
   });
 }
 
 export async function cancelInactivityNotification(): Promise<void> {
   try {
-    await notifee.cancelNotification('inactivity-reminder');
+    await Promise.all([
+      notifee.cancelNotification(INACTIVITY_NOTIFICATION_ID),
+      notifee.cancelTriggerNotification(INACTIVITY_NOTIFICATION_ID),
+    ]);
   } catch (error) {
     console.warn('Error canceling inactivity notification:', error);
   }
+}
+
+async function handleInactivityReminderDelivered(): Promise<void> {
+  try {
+    await scheduleInactivityReminder();
+  } catch (error) {
+    console.warn('Error scheduling next inactivity reminder:', error);
+  }
+}
+
+export function registerNotificationListeners(): void {
+  if (listenersRegistered) {
+    return;
+  }
+  listenersRegistered = true;
+
+  const handler = async ({ type, detail }: { type: EventType; detail: any }) => {
+    if (detail.notification?.id !== INACTIVITY_NOTIFICATION_ID) {
+      return;
+    }
+
+    if (type === EventType.DELIVERED) {
+      await handleInactivityReminderDelivered();
+    }
+  };
+
+  notifee.onForegroundEvent(handler);
+  notifee.onBackgroundEvent(handler);
 }
 
 // ============================================

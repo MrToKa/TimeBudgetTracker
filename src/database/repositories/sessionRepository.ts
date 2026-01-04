@@ -3,7 +3,7 @@
 import { v4 as uuidv4 } from 'uuid';
 import { executeQuery, executeQuerySingle, executeSql } from '../database';
 import { TimeSession, SessionWithDetails, CreateSessionInput, UpdateSessionInput, SessionSource } from '../../types';
-import { nowISO, getDayStart, getDayEnd, getWeekStart, getWeekEnd, getMonthStart, getMonthEnd, calculateDurationMinutes } from '../../utils/dateUtils';
+import { nowISO, getDayStart, getDayEnd, getWeekStart, getWeekEnd, getMonthStart, getMonthEnd, calculateDurationMinutes, getNextDay, isSameDayCheck } from '../../utils/dateUtils';
 
 // Database row type (snake_case)
 interface SessionRow {
@@ -190,15 +190,67 @@ export async function stopSession(id: string): Promise<TimeSession | null> {
   }
   
   const endTime = nowISO();
-  const durationMinutes = calculateDurationMinutes(session.startTime, endTime);
-  
+
+  // If the session stayed within a single day, keep the simple update path
+  if (isSameDayCheck(session.startTime, endTime)) {
+    const durationMinutes = calculateDurationMinutes(session.startTime, endTime);
+    
+    await executeSql(
+      `UPDATE time_sessions 
+       SET is_running = 0, end_time = ?, actual_duration_minutes = ?, updated_at = ?
+       WHERE id = ?`,
+      [endTime, durationMinutes, nowISO(), id]
+    );
+    
+    return getSessionById(id);
+  }
+
+  // Split sessions that crossed midnight so each day gets its portion
+  const segments: { start: string; end: string; duration: number }[] = [];
+  let segmentStart = session.startTime;
+
+  while (!isSameDayCheck(segmentStart, endTime)) {
+    const nextDayStart = getDayStart(getNextDay(segmentStart)).toISOString();
+    segments.push({
+      start: segmentStart,
+      end: nextDayStart,
+      duration: calculateDurationMinutes(segmentStart, nextDayStart),
+    });
+    segmentStart = nextDayStart;
+  }
+
+  segments.push({
+    start: segmentStart,
+    end: endTime,
+    duration: calculateDurationMinutes(segmentStart, endTime),
+  });
+
+  // Update original session with the first segment
   await executeSql(
     `UPDATE time_sessions 
      SET is_running = 0, end_time = ?, actual_duration_minutes = ?, updated_at = ?
      WHERE id = ?`,
-    [endTime, durationMinutes, nowISO(), id]
+    [segments[0].end, segments[0].duration, nowISO(), id]
   );
-  
+
+  // Persist remaining day slices as separate sessions
+  for (let i = 1; i < segments.length; i++) {
+    await createSession({
+      activityId: session.activityId,
+      activityNameSnapshot: session.activityNameSnapshot,
+      categoryId: session.categoryId,
+      categoryNameSnapshot: session.categoryNameSnapshot,
+      startTime: segments[i].start,
+      endTime: segments[i].end,
+      actualDurationMinutes: segments[i].duration,
+      expectedDurationMinutes: session.expectedDurationMinutes,
+      isPlanned: session.isPlanned,
+      source: session.source,
+      isRunning: false,
+      idlePromptEnabled: session.idlePromptEnabled,
+    });
+  }
+
   return getSessionById(id);
 }
 
