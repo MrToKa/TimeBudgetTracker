@@ -335,6 +335,9 @@ export const useTimerStore = create<TimerState>((set, get) => ({
       const count = runningTimers.length;
       set({ runningTimers: [] });
       
+      // Start inactivity reminders now that no timers are running
+      startInactivityMonitor(false);
+      
       return count;
     } catch (error) {
       set({ error: (error as Error).message });
