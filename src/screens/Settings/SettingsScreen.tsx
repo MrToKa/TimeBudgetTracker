@@ -43,7 +43,7 @@ const SETTINGS_CONFIG: { section: string; items: SettingItem[] }[] = [
       },
       {
         key: 'noTimerReminderMinutes',
-        title: 'Reminder Interval',
+        title: 'No Timer Reminder Interval',
         subtitle: 'Minutes between no timer reminders',
         icon: 'clock-outline',
         type: 'number',
@@ -71,7 +71,7 @@ const SETTINGS_CONFIG: { section: string; items: SettingItem[] }[] = [
       },
       {
         key: 'longSessionThresholdMinutes',
-        title: 'Reminder Interval',
+        title: 'Long Session Reminder Interval',
         subtitle: 'Minutes between long session check-ins',
         icon: 'timer',
         type: 'number',
