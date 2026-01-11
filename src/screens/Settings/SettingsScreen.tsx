@@ -13,7 +13,7 @@ import { useTheme, ThemeMode } from '../../contexts/ThemeContext';
 import { Card } from '../../components/common';
 import { AppSettings, DEFAULT_SETTINGS } from '../../types';
 import { getSetting, setSetting, getAllSettings } from '../../database/repositories/settingsRepository';
-import { scheduleRoutineStartReminders } from '../../services/notificationService';
+import { scheduleRoutineStartReminders, syncLongSessionReminders } from '../../services/notificationService';
 
 interface SettingItem {
   key: keyof AppSettings;
@@ -24,25 +24,6 @@ interface SettingItem {
 }
 
 const SETTINGS_CONFIG: { section: string; items: SettingItem[] }[] = [
-  {
-    section: 'Idle Detection',
-    items: [
-      {
-        key: 'defaultIdlePromptEnabled',
-        title: 'Idle Detection',
-        subtitle: 'Prompt to stop timers when device is idle',
-        icon: 'sleep',
-        type: 'switch',
-      },
-      {
-        key: 'idleThresholdMinutes',
-        title: 'Idle Threshold',
-        subtitle: 'Minutes before showing idle prompt',
-        icon: 'timer-sand',
-        type: 'number',
-      },
-    ],
-  },
   {
     section: 'Notifications',
     items: [
@@ -83,15 +64,15 @@ const SETTINGS_CONFIG: { section: string; items: SettingItem[] }[] = [
       },
       {
         key: 'reminderLongSession',
-        title: 'Long Session Warning',
-        subtitle: 'Alert when a session exceeds threshold',
+        title: 'Long Session Reminders',
+        subtitle: 'Send check-ins for running timers',
         icon: 'alert-circle',
         type: 'switch',
       },
       {
         key: 'longSessionThresholdMinutes',
-        title: 'Long Session Threshold',
-        subtitle: 'Minutes before long session alert',
+        title: 'Reminder Interval',
+        subtitle: 'Minutes between long session check-ins',
         icon: 'timer',
         type: 'number',
       },
@@ -155,6 +136,15 @@ export default function SettingsScreen() {
           console.warn('[Routine] Failed to reschedule reminders from settings:', err)
         );
       }
+      if (
+        key === 'notificationsEnabled' ||
+        key === 'reminderLongSession' ||
+        key === 'longSessionThresholdMinutes'
+      ) {
+        syncLongSessionReminders().catch(err =>
+          console.warn('[Long Session] Failed to reschedule reminders from settings:', err)
+        );
+      }
     } catch (error) {
       console.error('Error saving setting:', error);
       Alert.alert('Error', 'Failed to save setting');
@@ -165,10 +155,10 @@ export default function SettingsScreen() {
     // For Android, we'll use a simple Alert with preset options
     let options: number[];
     
-    if (key === 'idleThresholdMinutes') {
-      options = [5, 10, 15, 30, 60];
-    } else if (key === 'noTimerReminderMinutes') {
+    if (key === 'noTimerReminderMinutes') {
       options = [1, 2, 5, 10, 15, 30, 60];
+    } else if (key === 'longSessionThresholdMinutes') {
+      options = [30, 60, 90];
     } else {
       options = [30, 60, 90, 120, 180];
     }

@@ -318,7 +318,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   reminderRoutineStart: true,
   reminderReviewMode: true,
   reminderLongSession: true,
-  longSessionThresholdMinutes: 120,
+  longSessionThresholdMinutes: 60,
   noTimerReminderEnabled: true,
   noTimerReminderMinutes: 5,
 };

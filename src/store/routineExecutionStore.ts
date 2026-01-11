@@ -8,6 +8,8 @@ import {
   scheduleTimerWarning,
   cancelTimerNotifications,
   showTimerStartNotification,
+  scheduleLongSessionReminder,
+  cancelLongSessionReminder,
 } from '../services/notificationService';
 import { useTimerStore } from './timerStore';
 import * as settingsRepository from '../database/repositories/settingsRepository';
@@ -140,6 +142,12 @@ export const useRoutineExecutionStore = create<RoutineExecutionState>((set, get)
           startDate
         );
       }
+      await scheduleLongSessionReminder(
+        session.id,
+        firstActivity.activityName,
+        new Date(now),
+        firstActivity.expectedMinutes
+      );
 
       // Persist run start time so hydration only counts this run
       await settingsRepository.setSetting(getRunStartKey(routine.id), now);
@@ -195,6 +203,7 @@ export const useRoutineExecutionStore = create<RoutineExecutionState>((set, get)
     const currentActivity = runningRoutine.activities[runningRoutine.currentActivityIndex];
     if (currentActivity.sessionId) {
       cancelTimerNotifications(currentActivity.sessionId);
+      cancelLongSessionReminder(currentActivity.sessionId);
     }
   },
 
@@ -218,19 +227,28 @@ export const useRoutineExecutionStore = create<RoutineExecutionState>((set, get)
     });
 
     // Reschedule notifications for remaining time
-    if (currentActivity.expectedMinutes && currentActivity.startTime && currentActivity.sessionId) {
+    if (currentActivity.startTime && currentActivity.sessionId) {
       const elapsed = get().getCurrentActivityDuration() / 60; // Convert to minutes
-      const remaining = currentActivity.expectedMinutes - elapsed;
-      
-      if (remaining > 5) {
-        const adjustedStartTime = new Date(Date.now() - (elapsed * 60 * 1000));
-        scheduleTimerWarning(
-          currentActivity.sessionId,
-          currentActivity.activityName,
-          Math.floor(remaining),
-          adjustedStartTime
-        );
+      const adjustedStartTime = new Date(Date.now() - (elapsed * 60 * 1000));
+
+      if (currentActivity.expectedMinutes) {
+        const remaining = currentActivity.expectedMinutes - elapsed;
+        if (remaining > 5) {
+          scheduleTimerWarning(
+            currentActivity.sessionId,
+            currentActivity.activityName,
+            Math.floor(remaining),
+            adjustedStartTime
+          );
+        }
       }
+
+      scheduleLongSessionReminder(
+        currentActivity.sessionId,
+        currentActivity.activityName,
+        adjustedStartTime,
+        currentActivity.expectedMinutes
+      );
     }
   },
 
@@ -252,6 +270,7 @@ export const useRoutineExecutionStore = create<RoutineExecutionState>((set, get)
       elapsedSeconds = calculateDurationSeconds(currentActivity.startTime, now);
       // Cancel current notifications
       cancelTimerNotifications(currentActivity.sessionId);
+      cancelLongSessionReminder(currentActivity.sessionId);
     }
 
     const updatedActivityDurations = { ...runningRoutine.activityDurations };
@@ -302,6 +321,12 @@ export const useRoutineExecutionStore = create<RoutineExecutionState>((set, get)
         startDate
       );
     }
+    await scheduleLongSessionReminder(
+      session.id,
+      nextActivity.activityName,
+      new Date(now),
+      nextActivity.expectedMinutes
+    );
 
     // Show start notification
     await showTimerStartNotification(nextActivity.activityName);
@@ -335,6 +360,7 @@ export const useRoutineExecutionStore = create<RoutineExecutionState>((set, get)
         currentActivity.endTime = now;
         // Cancel all notifications
         await cancelTimerNotifications(currentActivity.sessionId);
+        await cancelLongSessionReminder(currentActivity.sessionId);
       }
     } catch (err) {
       console.warn('Failed to stop current routine session', err);

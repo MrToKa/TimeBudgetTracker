@@ -12,7 +12,7 @@ import notifee, {
 import { getSettingBoolean, getSettingNumber } from '../database/repositories/settingsRepository';
 import { getRunningSession } from '../database/repositories/sessionRepository';
 import { getRoutineSchedules, RoutineSchedule, getRoutineWithItems } from '../database/repositories/routineRepository';
-import { RoutineWithItems } from '../types';
+import { RoutineWithItems, TimeSession } from '../types';
 import * as sessionRepository from '../database/repositories/sessionRepository';
 import { nowISO } from '../utils/dateUtils';
 import { executeQuery } from '../database/database';
@@ -26,6 +26,8 @@ const ROUTINE_STEP_PREFIX = 'routine-step-';
 const INACTIVITY_NOTIFICATION_ID = 'inactivity-reminder';
 const DEFAULT_INACTIVITY_MINUTES = 5;
 const ROUTINE_NOTIFICATION_PREFIX = 'routine-start-';
+const LONG_SESSION_NOTIFICATION_PREFIX = 'long-session-';
+const DEFAULT_LONG_SESSION_INTERVAL_MINUTES = 60;
 
 // ============================================
 // Setup
@@ -152,6 +154,162 @@ export async function showTimerStartNotification(activityName: string): Promise<
       color: '#3B82F6',
     },
   });
+}
+
+// ============================================
+// Long Session Reminders
+// ============================================
+
+function getLongSessionNotificationId(sessionId: string): string {
+  return `${LONG_SESSION_NOTIFICATION_PREFIX}${sessionId}`;
+}
+
+function getNextLongSessionReminderTimestamp(
+  startTime: Date,
+  expectedMinutes: number | null,
+  intervalMinutes: number
+): number {
+  const intervalMs = intervalMinutes * 60 * 1000;
+  const expectedMs = expectedMinutes && expectedMinutes > 0 ? expectedMinutes * 60 * 1000 : 0;
+  const baselineMs = startTime.getTime() + expectedMs;
+  const firstReminderMs = baselineMs + intervalMs;
+  const now = Date.now();
+
+  if (firstReminderMs > now) {
+    return firstReminderMs;
+  }
+
+  const elapsedSinceBaseline = now - baselineMs;
+  const intervalsPassed = Math.floor(elapsedSinceBaseline / intervalMs);
+  let nextReminderMs = baselineMs + intervalMs * (intervalsPassed + 1);
+  if (nextReminderMs <= now) {
+    nextReminderMs += intervalMs;
+  }
+  return nextReminderMs;
+}
+
+async function clearLongSessionReminders(): Promise<void> {
+  try {
+    const triggers = await notifee.getTriggerNotifications();
+    const reminderIds = triggers
+      .filter(t => t.notification?.id?.startsWith(LONG_SESSION_NOTIFICATION_PREFIX))
+      .map(t => t.notification?.id as string);
+
+    await Promise.all(
+      reminderIds.map(id =>
+        Promise.all([
+          notifee.cancelTriggerNotification(id),
+          notifee.cancelNotification(id),
+        ])
+      )
+    );
+  } catch (error) {
+    console.warn('[Long Session] Failed to clear reminders:', error);
+  }
+}
+
+export async function cancelLongSessionReminder(sessionId: string): Promise<void> {
+  const notificationId = getLongSessionNotificationId(sessionId);
+  try {
+    await Promise.all([
+      notifee.cancelTriggerNotification(notificationId),
+      notifee.cancelNotification(notificationId),
+    ]);
+  } catch (error) {
+    console.warn('[Long Session] Error canceling reminder:', error);
+  }
+}
+
+export async function scheduleLongSessionReminder(
+  sessionId: string,
+  activityName: string,
+  startTime: Date,
+  expectedMinutes: number | null,
+  intervalOverride?: number
+): Promise<void> {
+  const notificationsEnabled = await getSettingBoolean('notificationsEnabled', true);
+  const reminderEnabled = await getSettingBoolean('reminderLongSession', true);
+  if (!notificationsEnabled || !reminderEnabled) {
+    await cancelLongSessionReminder(sessionId);
+    return;
+  }
+
+  const intervalMinutes =
+    intervalOverride ??
+    (await getSettingNumber('longSessionThresholdMinutes', DEFAULT_LONG_SESSION_INTERVAL_MINUTES));
+
+  if (!intervalMinutes || intervalMinutes <= 0) {
+    await cancelLongSessionReminder(sessionId);
+    return;
+  }
+
+  const triggerTime = getNextLongSessionReminderTimestamp(
+    startTime,
+    expectedMinutes,
+    intervalMinutes
+  );
+
+  const trigger: TimestampTrigger = {
+    type: TriggerType.TIMESTAMP,
+    timestamp: triggerTime,
+    alarmManager: { type: AlarmType.SET_EXACT_AND_ALLOW_WHILE_IDLE },
+  };
+
+  await notifee.createTriggerNotification(
+    {
+      id: getLongSessionNotificationId(sessionId),
+      title: 'Long session check-in',
+      body: `Are you still doing ${activityName} activity?`,
+      data: { sessionId },
+      android: {
+        channelId: TIMER_CHANNEL_ID,
+        importance: AndroidImportance.HIGH,
+        pressAction: { id: 'default' },
+        smallIcon: 'ic_launcher',
+        color: '#3B82F6',
+      },
+    },
+    trigger
+  );
+}
+
+export async function syncLongSessionReminders(sessions?: TimeSession[]): Promise<void> {
+  const notificationsEnabled = await getSettingBoolean('notificationsEnabled', true);
+  const reminderEnabled = await getSettingBoolean('reminderLongSession', true);
+  if (!notificationsEnabled || !reminderEnabled) {
+    await clearLongSessionReminders();
+    return;
+  }
+
+  const runningSessions = sessions ?? (await getRunningSession());
+  if (runningSessions.length === 0) {
+    await clearLongSessionReminders();
+    return;
+  }
+
+  const intervalMinutes = await getSettingNumber(
+    'longSessionThresholdMinutes',
+    DEFAULT_LONG_SESSION_INTERVAL_MINUTES
+  );
+
+  if (!intervalMinutes || intervalMinutes <= 0) {
+    await clearLongSessionReminders();
+    return;
+  }
+
+  await clearLongSessionReminders();
+
+  await Promise.all(
+    runningSessions.map(session =>
+      scheduleLongSessionReminder(
+        session.id,
+        session.activityNameSnapshot,
+        new Date(session.startTime),
+        session.expectedDurationMinutes,
+        intervalMinutes
+      )
+    )
+  );
 }
 
 // ============================================
@@ -442,6 +600,12 @@ async function startRoutineActivity(
   });
 
   await scheduleTimerWarning(session.id, activity.activity.name, expectedMinutes, new Date(start));
+  await scheduleLongSessionReminder(
+    session.id,
+    activity.activity.name,
+    new Date(start),
+    expectedMinutes
+  );
   await showTimerStartNotification(activity.activity.name);
   const timerStore = await import('../store/timerStore');
   await timerStore.useTimerStore.getState().loadRunningTimers();
@@ -649,6 +813,25 @@ async function handleInactivityReminderDelivered(): Promise<void> {
   }
 }
 
+async function handleLongSessionReminderDelivered(sessionId: string): Promise<void> {
+  try {
+    const session = await sessionRepository.getSessionById(sessionId);
+    if (!session || !session.isRunning) {
+      await cancelLongSessionReminder(sessionId);
+      return;
+    }
+
+    await scheduleLongSessionReminder(
+      session.id,
+      session.activityNameSnapshot,
+      new Date(session.startTime),
+      session.expectedDurationMinutes
+    );
+  } catch (error) {
+    console.warn('[Long Session] Failed to schedule next reminder:', error);
+  }
+}
+
 export function registerNotificationListeners(): void {
   if (listenersRegistered) {
     return;
@@ -672,6 +855,14 @@ export function registerNotificationListeners(): void {
       const nextIndex = Number(data.nextIndex ?? 0);
       const routineId = data.routineId ?? notificationId.replace(ROUTINE_STEP_PREFIX, '').split('-')[0];
       await handleRoutineStepEvent(routineId, nextIndex, data.previousSessionId);
+      return;
+    }
+
+    if (notificationId?.startsWith(LONG_SESSION_NOTIFICATION_PREFIX) && type === EventType.DELIVERED) {
+      const sessionId =
+        detail.notification?.data?.sessionId ??
+        notificationId.replace(LONG_SESSION_NOTIFICATION_PREFIX, '');
+      await handleLongSessionReminderDelivered(sessionId);
       return;
     }
 

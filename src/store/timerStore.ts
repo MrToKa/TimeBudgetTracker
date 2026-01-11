@@ -9,6 +9,9 @@ import { nowISO, calculateDurationMinutes } from '../utils/dateUtils';
 import {
   scheduleTimerWarning,
   cancelTimerNotifications,
+  scheduleLongSessionReminder,
+  cancelLongSessionReminder,
+  syncLongSessionReminders,
   startInactivityMonitor,
   stopInactivityMonitor,
   cancelInactivityNotification,
@@ -57,6 +60,12 @@ export const useTimerStore = create<TimerState>((set, get) => ({
       }));
       
       set({ runningTimers: timers, isLoading: false });
+
+      try {
+        await syncLongSessionReminders(sessions);
+      } catch (error) {
+        console.warn('[Long Session] Failed to sync reminders:', error);
+      }
       
       // Update inactivity monitor based on running timers
       if (timers.length > 0) {
@@ -139,6 +148,13 @@ export const useTimerStore = create<TimerState>((set, get) => ({
           new Date(startTime)
         );
       }
+
+      await scheduleLongSessionReminder(
+        session.id,
+        activity.name,
+        new Date(startTime),
+        finalExpectedMinutes
+      );
       
       // Stop inactivity monitor since a timer is now running
       await stopInactivityMonitor();
@@ -203,6 +219,13 @@ export const useTimerStore = create<TimerState>((set, get) => ({
       set(state => ({
         runningTimers: [...state.runningTimers, timer],
       }));
+
+      await scheduleLongSessionReminder(
+        session.id,
+        activityName,
+        new Date(startTime),
+        null
+      );
       
       // Show timer start notification
       const { showTimerStartNotification } = await import('../services/notificationService');
@@ -274,6 +297,13 @@ export const useTimerStore = create<TimerState>((set, get) => ({
           new Date(startTime)
         );
       }
+
+      await scheduleLongSessionReminder(
+        session.id,
+        activityName,
+        new Date(startTime),
+        expectedMinutes
+      );
       
       // Stop inactivity monitor since a timer is now running
       await stopInactivityMonitor();
@@ -302,6 +332,7 @@ export const useTimerStore = create<TimerState>((set, get) => ({
       
       // Cancel any scheduled notifications for this timer
       await cancelTimerNotifications(timer.sessionId);
+      await cancelLongSessionReminder(timer.sessionId);
       
       // Stop session in database
       const session = await sessionRepository.stopSession(timer.sessionId);
@@ -331,6 +362,7 @@ export const useTimerStore = create<TimerState>((set, get) => ({
       
       for (const timer of runningTimers) {
         await sessionRepository.stopSession(timer.sessionId);
+        await cancelLongSessionReminder(timer.sessionId);
       }
       
       const count = runningTimers.length;
